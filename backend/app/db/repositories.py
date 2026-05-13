@@ -76,17 +76,8 @@ class AnalysisRepository:
         query: Dict[str, Any] = {}
         if before_created_at is not None:
             query["created_at"] = {"$lt": before_created_at}
-        cursor = collection.find(
-            query,
-            {
-                "moves": 0,
-                "pgn": 0,
-                "summary.white_accuracy": 1,
-                "summary.black_accuracy": 1,
-                "metadata.opening": 1,
-                "metadata.eco": 1,
-            },
-        ).sort("created_at", -1)
+        # Exclusion-only: MongoDB rejects mixing moves:0 with summary.field:1 (inclusion).
+        cursor = collection.find(query, {"moves": 0, "pgn": 0}).sort("created_at", -1)
         if before_created_at is None:
             cursor = cursor.skip(skip)
         cursor = cursor.limit(limit)

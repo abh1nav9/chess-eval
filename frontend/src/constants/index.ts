@@ -44,7 +44,7 @@ export const CLASSIFICATION_ARROW_COLOR: Record<MoveClassification, string> = {
   blunder: 'rgb(192, 44, 44)',
 };
 
-export const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+export const INITIAL_FEN = 'r2qkbnr/1pp2Q1p/p2p1pp1/8/P1B1P3/8/1Pn2PPP/RNB2RK1 b kq - 3 12';
 
 export const SAMPLE_PGN = `[Event "Live Chess"]
 [Site "Chess.com"]

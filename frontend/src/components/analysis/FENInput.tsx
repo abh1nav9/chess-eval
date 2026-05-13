@@ -24,7 +24,7 @@ export function FENInput() {
     <div className="space-y-3">
       <Input
         label="FEN Position"
-        placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        placeholder="r2qkbnr/1pp2Q1p/p2p1pp1/8/P1B1P3/8/1Pn2PPP/RNB2RK1 b kq - 3 12"
         value={fen}
         onChange={(e) => setFen(e.target.value)}
         className="font-mono text-xs"

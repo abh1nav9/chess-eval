@@ -120,6 +120,10 @@ class AnalysisPipeline:
 
         analysis_depth = depth or self.engine_config.depth
         board = chess.Board(fen)
+        terminal = self._fen_terminal_response(fen, board)
+        if terminal is not None:
+            return terminal
+
         settings = get_settings()
         mv_ms = min(5000, settings.STOCKFISH_MAX_MOVETIME_MS) if settings.STOCKFISH_MAX_MOVETIME_MS else 5000
 
@@ -168,6 +172,41 @@ class AnalysisPipeline:
             "turn": "white" if board.turn == chess.WHITE else "black",
             "top_lines": lines,
         }
+
+    @staticmethod
+    def _fen_terminal_response(fen: str, board: chess.Board) -> Optional[dict]:
+        """Checkmate / stalemate: Stockfish often emits ``bestmove`` with no MultiPV ``info`` lines."""
+        turn_label = "white" if board.turn == chess.WHITE else "black"
+        base = {
+            "fen": fen,
+            "best_move": "",
+            "best_move_uci": "",
+            "pv": [],
+            "depth": 0,
+            "turn": turn_label,
+            "top_lines": [],
+        }
+        if board.is_checkmate():
+            white_won = board.turn == chess.BLACK
+            ev = 100.0 if white_won else -100.0
+            return {
+                **base,
+                "eval": ev,
+                "mate_in": 0,
+                "is_check": True,
+                "is_checkmate": True,
+                "is_stalemate": False,
+            }
+        if board.is_stalemate():
+            return {
+                **base,
+                "eval": 0.0,
+                "mate_in": None,
+                "is_check": False,
+                "is_checkmate": False,
+                "is_stalemate": True,
+            }
+        return None
 
     @staticmethod
     def _cp_swing_from_score(sc: EngineScore) -> int:

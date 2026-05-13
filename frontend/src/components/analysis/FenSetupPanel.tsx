@@ -7,7 +7,7 @@ import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
 
 export function FenSetupPanel() {
-  const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+  const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1');
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const setFENResult = useAnalysisStore((s) => s.setFENResult);

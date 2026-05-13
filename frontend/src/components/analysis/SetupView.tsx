@@ -44,7 +44,7 @@ export function SetupView() {
               }`}
             >
               <FileText size={16} />
-              Paste PGN
+              PGN
             </button>
             <button
               type="button"
