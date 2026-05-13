@@ -71,6 +71,8 @@ export interface PGNAnalysisResult {
   moves: MoveEvaluation[];
   summary: AnalysisSummary;
   pgn: string;
+  /** Requested PGN search depth (may differ from per-position tiered depth when 26). */
+  depth?: number;
   created_at: string;
   completed_at: string | null;
 }

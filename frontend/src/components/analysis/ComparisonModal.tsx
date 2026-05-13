@@ -2,12 +2,21 @@ import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import { Button } from '@/components/ui/Button';
 import type { MoveEvaluation } from '@/types';
+import type { Square } from 'chess.js';
+import { CLASSIFICATION_ARROW_COLOR } from '@/constants';
 
 type ComparisonModalProps = {
   move: MoveEvaluation | null;
   open: boolean;
   onClose: () => void;
 };
+
+function uciToArrowTuples(uci: string | null | undefined, rgb: string): [Square, Square, string][] {
+  if (!uci || uci.length < 4) return [];
+  const from = uci.slice(0, 2) as Square;
+  const to = uci.slice(2, 4) as Square;
+  return [[from, to, rgb]];
+}
 
 function fenAfterBest(move: MoveEvaluation): string | null {
   if (!move.best_move_uci) return null;
@@ -26,6 +35,13 @@ export function ComparisonModal({ move, open, onClose }: ComparisonModalProps) {
   if (!open || !move) return null;
   const bestFen = fenAfterBest(move);
   if (!bestFen) return null;
+
+  const playedRgb = CLASSIFICATION_ARROW_COLOR[move.classification];
+  const bestRgb = CLASSIFICATION_ARROW_COLOR.best;
+  const playedArrows = uciToArrowTuples(move.move_uci, playedRgb);
+  const bestArrows = move.best_move_uci
+    ? uciToArrowTuples(move.best_move_uci, bestRgb)
+    : [];
 
   return (
     <div
@@ -46,6 +62,8 @@ export function ComparisonModal({ move, open, onClose }: ComparisonModalProps) {
               position={move.fen_after}
               boardOrientation="white"
               arePiecesDraggable={false}
+              areArrowsAllowed={true}
+              customArrows={playedArrows}
               customBoardStyle={{ borderRadius: 8 }}
             />
           </div>
@@ -55,6 +73,8 @@ export function ComparisonModal({ move, open, onClose }: ComparisonModalProps) {
               position={bestFen}
               boardOrientation="white"
               arePiecesDraggable={false}
+              areArrowsAllowed={true}
+              customArrows={bestArrows}
               customBoardStyle={{ borderRadius: 8 }}
             />
           </div>

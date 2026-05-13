@@ -1,3 +1,4 @@
+import { DEFAULT_PGN_ANALYSIS_DEPTH } from '@/constants/analysisDepth';
 import { useUIStore } from '@/store/uiStore';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { Tabs } from '@/components/ui/Tabs';
@@ -31,7 +32,11 @@ export function AnalysisSidebar() {
           <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Analysis</h2>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
-              depth=26 | Stockfish 18
+              {pgnResult
+                ? `depth=${pgnResult.depth ?? DEFAULT_PGN_ANALYSIS_DEPTH} | Stockfish 18`
+                : fenResult
+                  ? `depth=${fenResult.depth} | Stockfish 18`
+                  : 'Stockfish 18'}
             </span>
             {/* <button className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer">
               <Settings size={14} />

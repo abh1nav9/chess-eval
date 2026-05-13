@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
 import { useSubmitPGN } from '@/hooks/useAnalysis';
-
-const DEFAULT_PGN_DEPTH = 26;
+import { DEFAULT_PGN_ANALYSIS_DEPTH } from '@/constants/analysisDepth';
 
 const DEPTH_OPTIONS = [
   { value: 18, label: '18', description: 'Fast' },
@@ -18,11 +17,16 @@ export function ReanalyzePanel() {
   const { pgnResult, isAnalyzing, chessComPlayerOverlay } = useAnalysisStore();
   const { loadGame } = useGameStore();
   const submitPGN = useSubmitPGN();
-  const [selectedDepth, setSelectedDepth] = useState(DEFAULT_PGN_DEPTH);
+  const [selectedDepth, setSelectedDepth] = useState(DEFAULT_PGN_ANALYSIS_DEPTH);
+
+  useEffect(() => {
+    if (!pgnResult) return;
+    setSelectedDepth(pgnResult.depth ?? DEFAULT_PGN_ANALYSIS_DEPTH);
+  }, [pgnResult?.analysis_id, pgnResult?.depth, pgnResult]);
 
   if (!pgnResult || isAnalyzing) return null;
 
-  const currentDepth = DEFAULT_PGN_DEPTH;
+  const analysisDepth = pgnResult.depth ?? DEFAULT_PGN_ANALYSIS_DEPTH;
 
   const handleReanalyze = () => {
     if (!pgnResult.pgn) return;
@@ -60,7 +64,7 @@ export function ReanalyzePanel() {
 
       <button
         onClick={handleReanalyze}
-        disabled={selectedDepth === currentDepth}
+        disabled={selectedDepth === analysisDepth}
         className="w-full py-2 text-xs font-medium rounded-[var(--radius-sm)] transition-all cursor-pointer bg-[var(--color-accent)] text-[var(--color-accent-fg)] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Re-analyze at depth {selectedDepth}

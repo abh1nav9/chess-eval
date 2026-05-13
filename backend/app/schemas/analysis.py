@@ -135,6 +135,7 @@ class PGNAnalysisResponse(BaseModel):
     moves: List[MoveEvaluation] = Field(default_factory=list)
     summary: AnalysisSummary = Field(default_factory=AnalysisSummary)
     pgn: str = Field("", description="Original PGN")
+    depth: int = Field(26, description="Requested analysis depth for this run")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = None
 
