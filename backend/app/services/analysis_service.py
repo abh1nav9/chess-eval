@@ -6,7 +6,7 @@ Sits between API routes and the analysis pipeline/repository layers.
 import logging
 from typing import Any, Dict
 
-from app.analysis.pipeline import AnalysisPipeline
+from app.analysis.pipeline import AnalysisPipeline, GAME_ANALYSIS_DEPTH
 from app.core.config import get_settings
 from app.core.exceptions import (
     AnalysisNotFoundError,
@@ -50,7 +50,7 @@ class AnalysisService:
         """Analyze a full PGN game asynchronously.
 
         Args:
-            depth: Optional custom depth (user override). None = default tiered (18-28).
+            depth: Optional custom depth (user override). None = default tiered (GAME_ANALYSIS_DEPTH).
         """
         import uuid
         from app.models.analysis import AnalysisDocument
@@ -59,7 +59,7 @@ class AnalysisService:
             raise InvalidPGNError("Could not parse the provided PGN. Please check the format.")
 
         analysis_id = str(uuid.uuid4())
-        analysis_depth = depth or 22
+        analysis_depth = depth or GAME_ANALYSIS_DEPTH
 
         # Create initial pending document
         initial_doc = AnalysisDocument(

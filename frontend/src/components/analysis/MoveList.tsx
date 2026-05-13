@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
+import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 import { Badge } from '@/components/ui/Badge';
 import type { MoveEvaluation } from '@/types';
 
@@ -13,8 +14,11 @@ export function MoveList() {
   const moves = pgnResult?.moves || [];
 
   const handleMoveClick = (index: number) => {
+    const prev = useGameStore.getState().currentMoveIndex;
     setSelectedMove(index);
     goToMove(index);
+    const snap = useGameStore.getState();
+    gameSoundCoordinator.onBoardNavigation(prev, snap.currentMoveIndex, snap);
   };
 
   useEffect(() => {

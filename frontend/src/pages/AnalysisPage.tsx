@@ -21,7 +21,7 @@ export function AnalysisPage() {
     pendingAnalysisId,
     analysisProgress,
   } = useAnalysisStore();
-  const { isExploring } = useGameStore();
+  const { isExploring, orientation } = useGameStore();
 
   useAnalysisWebSocket(pendingAnalysisId);
 
@@ -46,6 +46,17 @@ export function AnalysisPage() {
 
   const hasAnalysis = pgnResult || fenResult;
 
+  const blackToMove = pgnResult
+    ? selectedMoveIndex >= 0 && pgnResult.moves[selectedMoveIndex]?.color === 'white'
+    : fenResult?.turn === 'black';
+
+  const whiteToMove = pgnResult
+    ? selectedMoveIndex === -1 ||
+      (selectedMoveIndex >= 0 && pgnResult.moves[selectedMoveIndex]?.color === 'black')
+    : fenResult?.turn === 'white';
+
+  const boardTopIsBlack = orientation === 'white';
+
   return (
     <PageShell>
       {!hasAnalysis && !isAnalyzing && !pendingAnalysisId ? (
@@ -59,27 +70,19 @@ export function AnalysisPage() {
             )}
             <div>
               <PlayerInfo
-                name={pgnResult?.metadata.black || 'Black'}
-                rating={pgnResult?.metadata.black_elo}
-                color="black"
-                active={
-                  pgnResult
-                    ? selectedMoveIndex >= 0 && pgnResult.moves[selectedMoveIndex]?.color === 'white'
-                    : fenResult?.turn === 'black'
-                }
+                name={boardTopIsBlack ? pgnResult?.metadata.black || 'Black' : pgnResult?.metadata.white || 'White'}
+                rating={boardTopIsBlack ? pgnResult?.metadata.black_elo : pgnResult?.metadata.white_elo}
+                color={boardTopIsBlack ? 'black' : 'white'}
+                active={boardTopIsBlack ? !!blackToMove : !!whiteToMove}
               />
               <div className="my-1">
                 <ChessBoard />
               </div>
               <PlayerInfo
-                name={pgnResult?.metadata.white || 'White'}
-                rating={pgnResult?.metadata.white_elo}
-                color="white"
-                active={
-                  pgnResult
-                    ? selectedMoveIndex === -1 || pgnResult.moves[selectedMoveIndex]?.color === 'black'
-                    : fenResult?.turn === 'white'
-                }
+                name={boardTopIsBlack ? pgnResult?.metadata.white || 'White' : pgnResult?.metadata.black || 'Black'}
+                rating={boardTopIsBlack ? pgnResult?.metadata.white_elo : pgnResult?.metadata.black_elo}
+                color={boardTopIsBlack ? 'white' : 'black'}
+                active={boardTopIsBlack ? !!whiteToMove : !!blackToMove}
               />
               <BoardControls />
             </div>

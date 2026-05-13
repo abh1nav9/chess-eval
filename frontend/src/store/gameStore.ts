@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Chess } from 'chess.js';
+import { Chess, type Move } from 'chess.js';
 import { INITIAL_FEN } from '@/constants';
 
 interface GameState {
@@ -29,7 +29,7 @@ interface GameState {
   firstMove: () => void;
   lastMove: () => void;
   flipBoard: () => void;
-  makeMove: (from: string, to: string, promotion?: string) => boolean;
+  makeMove: (from: string, to: string, promotion?: string) => Move | null;
   reset: () => void;
 }
 
@@ -204,7 +204,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     try {
       const result = tempGame.move({ from, to, promotion: promotion || 'q' });
-      if (!result) return false;
+      if (!result) return null;
 
       const insertAt = state.currentMoveIndex + 1;
 
@@ -232,9 +232,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         isExploring: true,
       });
 
-      return true;
+      return result;
     } catch {
-      return false;
+      return null;
     }
   },
 

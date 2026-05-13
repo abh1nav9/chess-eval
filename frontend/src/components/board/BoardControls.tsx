@@ -9,6 +9,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
+import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 
 function syncSelection() {
   const { isExploring } = useGameStore.getState();
@@ -33,8 +34,11 @@ export function BoardControls() {
   const isAtEnd = currentMoveIndex >= fenHistory.length - 2;
 
   const runNav = useCallback((action: () => void) => {
+    const prev = useGameStore.getState().currentMoveIndex;
     action();
     syncSelection();
+    const snap = useGameStore.getState();
+    gameSoundCoordinator.onBoardNavigation(prev, snap.currentMoveIndex, snap);
   }, []);
 
   useEffect(() => {

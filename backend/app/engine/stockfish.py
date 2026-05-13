@@ -10,6 +10,7 @@ import logging
 from typing import List, Optional
 
 from app.engine.types import EngineConfig, EngineResult, EngineScore, ScoreType
+from app.engine.white_pov import WhitePovEngineNormalizer
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +128,8 @@ class StockfishEngine:
 
             await self._send_command(go_cmd)
 
-            return await self._parse_analysis_output(timeout=parse_timeout)
+            raw = await self._parse_analysis_output(timeout=parse_timeout)
+            return WhitePovEngineNormalizer.engine_result(fen, raw)
 
     async def analyze_position_multi_pv(
         self,
@@ -155,14 +157,14 @@ class StockfishEngine:
             await self._send_command(f"go depth {depth} movetime {movetime}")
 
             parse_timeout = (movetime / 1000.0) + 10.0
-            results = await self._parse_multi_pv_output(
+            raw_list = await self._parse_multi_pv_output(
                 num_lines=num_lines, timeout=parse_timeout
             )
 
             # Reset MultiPV
             await self._send_command(f"setoption name MultiPV value {self.config.multi_pv}")
 
-            return results
+            return [WhitePovEngineNormalizer.engine_result(fen, r) for r in raw_list]
 
     async def _send_command(self, command: str) -> None:
         """Send a UCI command to the engine."""

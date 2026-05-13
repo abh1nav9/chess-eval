@@ -35,7 +35,7 @@ from app.core.websocket import manager
 logger = logging.getLogger(__name__)
 
 
-GAME_ANALYSIS_DEPTH = 22
+GAME_ANALYSIS_DEPTH = 26
 
 
 class AnalysisPipeline:

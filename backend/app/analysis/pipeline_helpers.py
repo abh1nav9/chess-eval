@@ -10,6 +10,7 @@ import chess
 from app.analysis.classifier import Classification
 from app.analysis.pgn_parser import ParsedGame, ParsedMove
 from app.engine.types import EngineResult, EngineScore, ScoreType
+from app.engine.white_pov import WhitePovEngineNormalizer
 from app.models.analysis import GameMetadataDocument, MoveDocument
 
 
@@ -88,9 +89,13 @@ def cached_to_engine_result(cached: Dict) -> EngineResult:
         score = EngineScore(ScoreType.MATE, cached.get("mate_in", 0))
     else:
         score = EngineScore(ScoreType.CENTIPAWN, eval_cp)
-    return EngineResult(
+    r = EngineResult(
         score=score,
         best_move=cached.get("best_move", ""),
         pv=cached.get("pv", []),
         depth=cached.get("depth", 0),
     )
+    fen = cached.get("fen", "")
+    if cached.get("eval_white_pov") is True or not fen:
+        return r
+    return WhitePovEngineNormalizer.engine_result(fen, r)

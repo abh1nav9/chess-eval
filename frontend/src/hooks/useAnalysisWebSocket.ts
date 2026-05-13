@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
 import type { PGNAnalysisResult } from '@/types';
+import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 
 const WS_BASE = import.meta.env.VITE_WS_URL ??
   `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
@@ -74,6 +75,7 @@ export function useAnalysisWebSocket(analysisId: string | null) {
           setPGNResult(result);
           if (result.pgn) {
             loadGame(result.pgn);
+            gameSoundCoordinator.onPgnAnalysisReady(result.pgn);
           }
           socket.close();
         } else if (data.type === 'failed') {

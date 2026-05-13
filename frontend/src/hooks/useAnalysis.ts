@@ -3,6 +3,7 @@ import { analysisService } from '@/services/analysisService';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
 import type { PGNAnalysisRequest, FENAnalysisRequest } from '@/types';
+import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 
 export function useSubmitPGN() {
   const { setPGNResult, setAnalyzing, setError, setPendingAnalysisId } = useAnalysisStore();
@@ -60,6 +61,7 @@ export function useGetAnalysis(analysisId: string | undefined) {
       const data = await analysisService.getAnalysis(analysisId);
       setPGNResult(data);
       loadGame(data.pgn);
+      if (data.pgn) gameSoundCoordinator.onPgnAnalysisReady(data.pgn);
       return data;
     },
     enabled: !!analysisId,

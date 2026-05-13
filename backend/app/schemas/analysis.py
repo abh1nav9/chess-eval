@@ -41,7 +41,7 @@ class PGNAnalysisRequest(BaseModel):
     pgn: str = Field(..., description="PGN string of the game to analyze", min_length=1)
     depth: Optional[int] = Field(
         None,
-        description="Custom analysis depth (default 22 with tiered 18-28). Higher = slower but more accurate.",
+        description="Custom analysis depth (default 26 with tiered 18-28). Higher = slower but more accurate.",
         ge=10,
         le=40,
     )

@@ -13,6 +13,7 @@ import { Line } from 'react-chartjs-2';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
+import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 import { useUIStore } from '@/store/uiStore';
 
 ChartJS.register(
@@ -105,8 +106,11 @@ export function EvalGraph() {
     onClick: (_: any, elements: any[]) => {
       if (elements.length > 0) {
         const index = elements[0].index;
+        const prev = useGameStore.getState().currentMoveIndex;
         setSelectedMove(index);
         goToMove(index);
+        const snap = useGameStore.getState();
+        gameSoundCoordinator.onBoardNavigation(prev, snap.currentMoveIndex, snap);
       }
     },
     plugins: {

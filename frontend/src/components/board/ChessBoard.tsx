@@ -1,6 +1,7 @@
-import { useMemo, useCallback, useState, type CSSProperties, type FC, type ReactNode, type Ref } from 'react';
+import { useMemo, useCallback, useState, useRef, type CSSProperties, type FC, type ReactNode, type Ref } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
+import { Loader2 } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
 import { useAnalysisStore, type ExplorationMove } from '@/store/analysisStore';
 import { CLASSIFICATION_ARROW_COLOR, CLASSIFICATION_CONFIG } from '@/constants';
@@ -8,6 +9,7 @@ import type { MoveClassification } from '@/types';
 import type { Square } from 'chess.js';
 import { analysisService } from '@/services/analysisService';
 import { classifyLiveMove } from '@/utils/classifyLiveMove';
+import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 
 type ArrowTuple = [Square, Square, string?];
 
@@ -28,11 +30,13 @@ function rgbToRgba(rgb: string, alpha: number): string {
 function buildSquareRenderer(
   badgeSquare: Square | null,
   classification: MoveClassification | null,
+  processingSquare: Square | null,
 ): FC<CustomSquareProps> {
   return function AnalysisSquare({ children, ref, square, style }) {
     const show = badgeSquare === square && classification !== null;
     const cfg = classification ? CLASSIFICATION_CONFIG[classification] : null;
     const arrowRgb = classification ? CLASSIFICATION_ARROW_COLOR[classification] : null;
+    const showProcessing = processingSquare === square;
 
     const mergedStyle: CSSProperties = {
       ...(style as CSSProperties),
@@ -42,6 +46,15 @@ function buildSquareRenderer(
     return (
       <div ref={ref} style={mergedStyle}>
         {children}
+        {showProcessing && (
+          <span
+            className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center rounded-sm bg-black/35"
+            aria-live="polite"
+            aria-label="Analyzing move"
+          >
+            <Loader2 size={22} className="text-white animate-spin drop-shadow-sm" aria-hidden />
+          </span>
+        )}
         {show && cfg && arrowRgb && (
           <span
             className="pointer-events-none absolute right-0.5 top-0.5 z-[1] flex min-h-[1rem] min-w-[1rem] max-w-[calc(100%-4px)] items-center justify-center rounded border px-0.5 text-[8px] font-bold leading-none shadow-md"
@@ -97,6 +110,8 @@ export function ChessBoard() {
   } = useAnalysisStore();
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [legalMoves, setLegalMoves] = useState<Square[]>([]);
+  const [liveAnalysisPending, setLiveAnalysisPending] = useState<{ id: number; square: Square } | null>(null);
+  const livePendingIdRef = useRef(0);
 
   // Badge from PGN analysis OR exploration moves
   const { analysisStyles, customArrows, badgeSquare, classification } = useMemo(() => {
@@ -210,8 +225,13 @@ export function ChessBoard() {
   }, [analysisStyles, selectedSquare, legalMoves, currentFen]);
 
   const customSquare = useMemo(
-    () => buildSquareRenderer(badgeSquare, classification),
-    [badgeSquare, classification],
+    () =>
+      buildSquareRenderer(
+        badgeSquare,
+        classification,
+        liveAnalysisPending?.square ?? null,
+      ),
+    [badgeSquare, classification, liveAnalysisPending],
   );
 
   const attemptMove = useCallback(
@@ -221,8 +241,15 @@ export function ChessBoard() {
       const fenBefore = useGameStore.getState().currentFen;
       const turnBefore = new Chess(fenBefore).turn() === 'w' ? 'white' : 'black';
 
-      const success = makeMove(from, to, promotion || 'q');
-      if (!success) return false;
+      const played = makeMove(from, to, promotion || 'q');
+      if (!played) return false;
+
+      try {
+        const boardAfter = new Chess(played.after);
+        gameSoundCoordinator.afterMove(played, boardAfter);
+      } catch {
+        /* invalid resulting FEN */
+      }
 
       const newState = useGameStore.getState();
       const newFen = newState.currentFen;
@@ -234,33 +261,41 @@ export function ChessBoard() {
         clearExplorationMoves();
       }
 
-      // Fire FEN analysis, then classify and store
-      analysisService.analyzeFEN({ fen: newFen, num_lines: 3 }).then((result) => {
-        setFENResult(result);
+      const pendingId = ++livePendingIdRef.current;
+      setLiveAnalysisPending({ id: pendingId, square: to as Square });
 
-        const moveUci = `${from}${to}`;
-        const cls = classifyLiveMove(
-          evalBefore,
-          result.eval,
-          result.top_lines?.[0]?.move_uci ?? null,
-          moveUci,
-          turnBefore as 'white' | 'black',
-        );
+      analysisService
+        .analyzeFEN({ fen: newFen, num_lines: 3 })
+        .then((result) => {
+          setFENResult(result);
 
-        const expMove: ExplorationMove = {
-          moveIndex: moveIdx,
-          san,
-          moveUci,
-          evalBefore,
-          evalAfter: result.eval,
-          classification: cls,
-          bestMoveUci: result.best_move_uci || null,
-          fromSquare: from,
-          toSquare: to,
-        };
+          const moveUci = `${from}${to}`;
+          const cls = classifyLiveMove(
+            evalBefore,
+            result.eval,
+            result.top_lines?.[0]?.move_uci ?? null,
+            moveUci,
+            turnBefore as 'white' | 'black',
+          );
 
-        addExplorationMove(expMove);
-      }).catch(() => {});
+          const expMove: ExplorationMove = {
+            moveIndex: moveIdx,
+            san,
+            moveUci,
+            evalBefore,
+            evalAfter: result.eval,
+            classification: cls,
+            bestMoveUci: result.best_move_uci || null,
+            fromSquare: from,
+            toSquare: to,
+          };
+
+          addExplorationMove(expMove);
+        })
+        .catch(() => {})
+        .finally(() => {
+          setLiveAnalysisPending((p) => (p?.id === pendingId ? null : p));
+        });
 
       return true;
     },

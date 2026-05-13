@@ -4,10 +4,12 @@ import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
 import { useSubmitPGN } from '@/hooks/useAnalysis';
 
+const DEFAULT_PGN_DEPTH = 26;
+
 const DEPTH_OPTIONS = [
   { value: 18, label: '18', description: 'Fast' },
-  { value: 22, label: '22', description: 'Standard' },
-  { value: 26, label: '26', description: 'Deep' },
+  { value: 22, label: '22', description: 'Balanced' },
+  { value: 26, label: '26', description: 'Standard' },
   { value: 30, label: '30', description: 'Very Deep' },
   { value: 36, label: '36', description: 'Maximum' },
 ];
@@ -16,11 +18,11 @@ export function ReanalyzePanel() {
   const { pgnResult, isAnalyzing } = useAnalysisStore();
   const { loadGame } = useGameStore();
   const submitPGN = useSubmitPGN();
-  const [selectedDepth, setSelectedDepth] = useState(26);
+  const [selectedDepth, setSelectedDepth] = useState(DEFAULT_PGN_DEPTH);
 
   if (!pgnResult || isAnalyzing) return null;
 
-  const currentDepth = pgnResult.summary?.total_moves ? 22 : 0;
+  const currentDepth = DEFAULT_PGN_DEPTH;
 
   const handleReanalyze = () => {
     if (!pgnResult.pgn) return;

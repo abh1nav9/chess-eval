@@ -92,6 +92,8 @@ class PositionCacheDocument(BaseModel):
     best_move: str
     pv: List[str] = Field(default_factory=list)
     mate_in: Optional[int] = None
+    # True: eval_cp is White POV (matches engine wrapper). Missing/False: legacy UCI side-to-move.
+    eval_white_pov: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
     expires_at: datetime = Field(default_factory=datetime.utcnow)
 

@@ -38,7 +38,7 @@ export function AnalysisSidebar() {
           <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Analysis</h2>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
-              depth=18 | Stockfish 18
+              depth=26 | Stockfish 18
             </span>
             {/* <button className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer">
               <Settings size={14} />
