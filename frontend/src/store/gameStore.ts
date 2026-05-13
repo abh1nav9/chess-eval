@@ -63,8 +63,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     const history = game.history();
-    const fens: string[] = [INITIAL_FEN];
     const replay = new Chess();
+    const fens: string[] = [replay.fen()];
 
     for (const move of history) {
       replay.move(move);
@@ -82,7 +82,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       fenHistory: fens,
       moveHistory: history,
       currentMoveIndex: -1,
-      currentFen: INITIAL_FEN,
+      currentFen: fens[0],
       branchStartIndex: -1,
       isExploring: false,
       orientation,

@@ -5,11 +5,15 @@ Coordinates PGN parsing, engine evaluation, move classification, and result asse
 
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import chess
 
-from app.analysis.accuracy import game_accuracy, move_accuracy
+from app.analysis.accuracy import (
+    game_accuracy,
+    move_accuracy_from_child_results,
+    mover_win_pct_from_child_result,
+)
 from app.analysis.classifier import Classification, MoveClassifier
 from app.analysis.game_phase import detect_game_phase
 from app.analysis.missed_wins import find_missed_wins
@@ -280,6 +284,7 @@ class AnalysisPipeline:
                 cur_depth = depth
 
             multipv_alt: Optional[list[float]] = None
+            played_child_is_root_multipv = False
 
             if carried_result is not None:
                 before_result = carried_result
@@ -303,6 +308,7 @@ class AnalysisPipeline:
                 played_line = next((r for r in lines if r.best_move == parsed_move.uci), None)
                 if played_line is not None:
                     after_result = played_line
+                    played_child_is_root_multipv = True
                 else:
                     after_result = await self._get_eval_with_cache(
                         engine, parsed_move.fen_after, cur_depth
@@ -315,6 +321,45 @@ class AnalysisPipeline:
             carried_result = after_result
 
             board_before = chess.Board(parsed_move.fen_before)
+            acc_depth = (
+                settings.ACCURACY_CHILD_DEPTH
+                if settings.ACCURACY_CHILD_DEPTH > 0
+                else settings.ANALYSIS_CHEAP_PASS_DEPTH
+            )
+            mover_white = parsed_move.color == "white"
+            if len(list(board_before.legal_moves)) == 1:
+                res_played = await self._get_eval_with_cache(
+                    engine, parsed_move.fen_after, acc_depth
+                )
+                res_best = res_played
+                lichess_acc = 100.0
+            else:
+                if played_child_is_root_multipv:
+                    res_played = await self._get_eval_with_cache(
+                        engine, parsed_move.fen_after, acc_depth
+                    )
+                else:
+                    res_played = after_result
+                if best_move_uci == parsed_move.uci:
+                    res_best = res_played
+                else:
+                    res_best = await self._eval_child_after_best_move(
+                        engine,
+                        board_before,
+                        best_move_uci,
+                        parsed_move.uci,
+                        acc_depth,
+                        cur_depth,
+                        mv_ms,
+                        res_played,
+                    )
+                lichess_acc = move_accuracy_from_child_results(res_best, res_played, mover_white)
+
+            win_pct_played = mover_win_pct_from_child_result(res_played, mover_white)
+            played_cp_w = (
+                float(res_played.score.value) if not res_played.score.is_mate else None
+            )
+
             best_move_san = uci_to_san(board_before, best_move_uci)
             phase = detect_game_phase(board_before)
 
@@ -362,6 +407,9 @@ class AnalysisPipeline:
                 mate_in=mate_after,
                 phase=phase,
                 comment=(parsed_move.comment or None) or None,
+                lichess_accuracy=lichess_acc,
+                lichess_win_pct_played=win_pct_played,
+                lichess_played_cp_white_pov=played_cp_w,
             )
 
             move_documents.append(move_doc)
@@ -369,9 +417,6 @@ class AnalysisPipeline:
             prev_mate = mate_after
 
             await self._broadcast_progress(analysis_id, i, len(moves), move_doc)
-
-            if (i + 1) % 10 == 0:
-                logger.info(f"Analyzed {i + 1}/{len(moves)} moves")
 
         return move_documents
 
@@ -390,15 +435,46 @@ class AnalysisPipeline:
         for c in black_cls:
             black_class_counts[c.value] = black_class_counts.get(c.value, 0) + 1
 
-        # Win-probability based accuracy (excludes book moves)
-        white_accuracies = [
-            move_accuracy(m.eval_before, m.eval_after, True)
-            for m in white_moves if m.classification != "book"
-        ]
-        black_accuracies = [
-            move_accuracy(m.eval_before, m.eval_after, False)
-            for m in black_moves if m.classification != "book"
-        ]
+        cfg = get_settings()
+        vol_cap = cfg.ACCURACY_VOLATILITY_HALF_WINDOW_MAX
+        dec_mode = cfg.ACCURACY_DECISIVE_CP_MODE
+        dec_th = cfg.ACCURACY_DECISIVE_CP_THRESHOLD_CP
+
+        def _lichess_side_rows(side_moves: List[MoveDocument]) -> Tuple[List[float], List[float], List[Optional[float]]]:
+            accs: List[float] = []
+            wps: List[float] = []
+            cps: List[Optional[float]] = []
+            for m in side_moves:
+                if m.classification == "book" or m.lichess_accuracy is None:
+                    continue
+                accs.append(float(m.lichess_accuracy))
+                wps.append(
+                    float(m.lichess_win_pct_played)
+                    if m.lichess_win_pct_played is not None
+                    else 50.0
+                )
+                cps.append(m.lichess_played_cp_white_pov)
+            return accs, wps, cps
+
+        white_accs, white_wps, white_cps = _lichess_side_rows(white_moves)
+        black_accs, black_wps, black_cps = _lichess_side_rows(black_moves)
+
+        white_game_acc = game_accuracy(
+            white_accs,
+            white_wps,
+            played_child_cp_white_pov=white_cps,
+            decisive_mode=dec_mode,
+            decisive_cp_threshold=dec_th,
+            volatility_half_window_cap=vol_cap,
+        )
+        black_game_acc = game_accuracy(
+            black_accs,
+            black_wps,
+            played_child_cp_white_pov=black_cps,
+            decisive_mode=dec_mode,
+            decisive_cp_threshold=dec_th,
+            volatility_half_window_cap=vol_cap,
+        )
 
         avg_cpl_white = (
             sum(m.centipawn_loss for m in white_moves) / len(white_moves)
@@ -416,8 +492,8 @@ class AnalysisPipeline:
 
         return AnalysisSummaryDocument(
             total_moves=len(moves),
-            white_accuracy=round(game_accuracy(white_accuracies), 1),
-            black_accuracy=round(game_accuracy(black_accuracies), 1),
+            white_accuracy=white_game_acc,
+            black_accuracy=black_game_acc,
             white_classifications=white_class_counts,
             black_classifications=black_class_counts,
             avg_centipawn_loss_white=round(avg_cpl_white, 1),
@@ -462,6 +538,44 @@ class AnalysisPipeline:
         await self._try_cache_result(fen, fen_hash, result)
         return result
 
+    async def _eval_child_after_best_move(
+        self,
+        engine: StockfishEngine,
+        board_before: chess.Board,
+        best_move_uci: str,
+        played_uci: str,
+        acc_depth: int,
+        cur_depth: int,
+        mv_ms: int,
+        res_played: EngineResult,
+    ) -> EngineResult:
+        """Eval at FEN after best UCI; if UCI is not legal on ``board_before``, re-query root then retry."""
+        if best_move_uci == played_uci:
+            return res_played
+        try:
+            mv = chess.Move.from_uci(best_move_uci)
+        except ValueError:
+            mv = None
+        if mv is not None and mv in board_before.legal_moves:
+            b = board_before.copy()
+            b.push(mv)
+            return await self._get_eval_with_cache(engine, b.fen(), acc_depth)
+        rep_depth = min(cur_depth, max(acc_depth, 14))
+        repair = await engine.analyze_position(
+            board_before.fen(),
+            depth=rep_depth,
+            movetime=min(mv_ms, 1200),
+        )
+        try:
+            rm = chess.Move.from_uci(repair.best_move)
+        except ValueError:
+            return res_played
+        if rm not in board_before.legal_moves:
+            return res_played
+        b2 = board_before.copy()
+        b2.push(rm)
+        return await self._get_eval_with_cache(engine, b2.fen(), acc_depth)
+
     async def _try_cache_result(
         self, fen: str, fen_hash: str, result: EngineResult
     ) -> None:
@@ -493,4 +607,12 @@ class AnalysisPipeline:
             "current_san": move_doc.move,
             "last_move": move_doc.model_dump(),
         }
+        logger.info(
+            "analysis progress analysis_id=%s move=%s/%s san=%s pct=%s%%",
+            analysis_id,
+            index + 1,
+            total,
+            move_doc.move,
+            progress["percentage"],
+        )
         await manager.broadcast_progress(analysis_id, progress)

@@ -71,6 +71,7 @@ flowchart TB
 
 - **`StockfishEngine`** runs the binary over UCI (`asyncio` subprocess). Per-position analysis uses **`go depth N`** when **`STOCKFISH_MOVETIME=0`** (default), so searches are depth-limited only, not cut off by a movetime cap. If `STOCKFISH_MOVETIME > 0`, the command adds `movetime` as an additional ceiling.
 - **White POV**: raw UCI scores are from the side to move. **`WhitePovEngineNormalizer`** (`app/engine/white_pov.py`) flips centipawn and mate scores when Black is to move so API consumers and **`MoveClassifier`** always see evaluations from White’s perspective (positive favors White). Cached positions may carry **`eval_white_pov`**; older cache rows are normalized on read when that flag is absent. Run **`scripts/normalize_cache_white_pov.py`** once, then optionally set **`CACHE_STRICT_WHITE_POV=true`** to skip that legacy read-time flip (see `.env.example`).
+- **SPA contract**: responses expose engine evaluation in **pawns** (White POV) on analyses and moves (`eval`, `eval_before` / `eval_after`, etc.), with **`mate_in`** on moves when applicable. The React client maps pawns to its own Lichess-style **win-%** visualization for the eval bar and chart (see repo **`evalbar.md`** and `frontend/src/utils/evalBarPercent.ts`).
 - **`AnalysisPipeline`** replays the game, evaluates before/after positions, derives centipawn loss, and assigns classifications (brilliant / best / blunder / book / etc.).
 
 ## Prerequisites

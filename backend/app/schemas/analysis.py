@@ -88,6 +88,18 @@ class MoveEvaluation(BaseModel):
     mate_in: Optional[int] = Field(None, description="Mate in N moves (if applicable)")
     phase: Optional[str] = Field(None, description="opening | middlegame | endgame")
     comment: Optional[str] = Field(None, description="PGN comment after the move, if any")
+    lichess_accuracy: Optional[float] = Field(
+        None,
+        description="Lichess-style per-move accuracy (0-100) from child FEN probes; null for book",
+    )
+    lichess_win_pct_played: Optional[float] = Field(
+        None,
+        description="Mover Win% (0-100) at played-move child; used for volatility windows",
+    )
+    lichess_played_cp_white_pov: Optional[float] = Field(
+        None,
+        description="Played child eval in centipawns (white POV); null if mate; for decisive weighting",
+    )
 
 
 class GameMetadata(BaseModel):

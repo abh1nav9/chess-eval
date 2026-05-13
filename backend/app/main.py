@@ -96,7 +96,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ── CORS ──────────────────────────────────────────
+    # CORS 
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
@@ -105,7 +105,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Exception handlers ────────────────────────────
+    # Exception handlers 
     @app.exception_handler(ChessAnalysisError)
     async def chess_error_handler(request: Request, exc: ChessAnalysisError):
         return JSONResponse(
@@ -127,7 +127,7 @@ def create_app() -> FastAPI:
             },
         )
 
-    # ── Routes ────────────────────────────────────────
+    # Routes 
     app.include_router(v1_router, prefix=settings.API_PREFIX)
 
     # Root redirect to docs

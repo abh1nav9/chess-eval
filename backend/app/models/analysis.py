@@ -33,6 +33,9 @@ class MoveDocument(BaseModel):
     mate_in: Optional[int] = None
     phase: Optional[str] = None
     comment: Optional[str] = None
+    lichess_accuracy: Optional[float] = None
+    lichess_win_pct_played: Optional[float] = None
+    lichess_played_cp_white_pov: Optional[float] = None
 
 
 class GameMetadataDocument(BaseModel):

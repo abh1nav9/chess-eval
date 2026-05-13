@@ -26,6 +26,10 @@ function applyTheme(theme: Theme) {
   document.documentElement.style.colorScheme = theme;
 }
 
+function applyBoardChrome(boardTheme: BoardThemeId) {
+  document.documentElement.setAttribute('data-board-theme', boardTheme);
+}
+
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
@@ -49,13 +53,17 @@ export const useUIStore = create<UIState>()(
         applyTheme(next);
         set({ theme: next });
       },
-      setBoardTheme: (t) => set({ boardTheme: t }),
+      setBoardTheme: (t) => {
+        applyBoardChrome(t);
+        set({ boardTheme: t });
+      },
     }),
     {
       name: 'chess-eval-ui',
       partialize: (state) => ({ theme: state.theme, boardTheme: state.boardTheme }),
       onRehydrateStorage: () => (state) => {
         if (state?.theme) applyTheme(state.theme);
+        applyBoardChrome(state?.boardTheme ?? 'classic');
       },
     },
   ),

@@ -1,16 +1,13 @@
 import { useGameStore } from '@/store/gameStore';
 import { useAnalysisStore } from '@/store/analysisStore';
-import { useUIStore } from '@/store/uiStore';
-import { BOARD_THEMES, type BoardThemeId } from '@/constants/boardTheme';
 import { Button } from '@/components/ui/Button';
 import {
   ChevronFirst,
   ChevronLast,
   ChevronLeft,
   ChevronRight,
-  RotateCcw,
-  Copy,
   Keyboard,
+  RotateCcw,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
@@ -29,11 +26,8 @@ function syncSelection() {
 }
 
 export function BoardControls() {
-  const { firstMove, prevMove, nextMove, lastMove, flipBoard, currentMoveIndex, fenHistory, currentFen } =
+  const { firstMove, prevMove, nextMove, lastMove, flipBoard, currentMoveIndex, fenHistory } =
     useGameStore();
-  const pgnResult = useAnalysisStore((s) => s.pgnResult);
-  const boardTheme = useUIStore((s) => s.boardTheme);
-  const setBoardTheme = useUIStore((s) => s.setBoardTheme);
   const [helpOpen, setHelpOpen] = useState(false);
 
   const isAtStart = currentMoveIndex === -1;
@@ -46,24 +40,6 @@ export function BoardControls() {
     const snap = useGameStore.getState();
     gameSoundCoordinator.onBoardNavigation(prev, snap.currentMoveIndex, snap);
   }, []);
-
-  const copyFen = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(currentFen);
-    } catch {
-      /* ignore */
-    }
-  }, [currentFen]);
-
-  const copyPgn = useCallback(async () => {
-    const pgn = pgnResult?.pgn?.trim();
-    if (!pgn) return;
-    try {
-      await navigator.clipboard.writeText(pgn);
-    } catch {
-      /* ignore */
-    }
-  }, [pgnResult?.pgn]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -108,24 +84,6 @@ export function BoardControls() {
             <RotateCcw size={18} />
           </Button>
           <div className="w-px h-6 bg-[var(--color-border)] mx-1" />
-          <Button variant="ghost" size="sm" onClick={copyFen} title="Copy current FEN">
-            <span className="text-[10px] font-mono pr-1">FEN</span>
-            <Copy size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={copyPgn}
-            disabled={!pgnResult?.pgn}
-            title="Copy full game PGN"
-          >
-            <span className="text-[10px] font-mono pr-1">PGN</span>
-            <Copy size={14} />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setHelpOpen(true)} title="Keyboard shortcuts (?)">
-            <Keyboard size={16} />
-          </Button>
-          <div className="w-px h-6 bg-[var(--color-border)] mx-1" />
           <Button variant="ghost" size="sm" onClick={() => runNav(firstMove)} disabled={isAtStart} title="First move (Home)">
             <ChevronFirst size={20} />
           </Button>
@@ -138,23 +96,12 @@ export function BoardControls() {
           <Button variant="ghost" size="sm" onClick={() => runNav(lastMove)} disabled={isAtEnd} title="Last move (End)">
             <ChevronLast size={20} />
           </Button>
-        </div>
-        <div className="flex items-center justify-center gap-2">
-          <label htmlFor="board-theme" className="text-[10px] text-[var(--color-text-muted)] shrink-0">
-            Board
-          </label>
-          <select
-            id="board-theme"
-            value={boardTheme}
-            onChange={(e) => setBoardTheme(e.target.value as BoardThemeId)}
-            className="text-xs rounded border border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] px-2 py-1 max-w-[140px]"
-          >
-            {(Object.keys(BOARD_THEMES) as BoardThemeId[]).map((id) => (
-              <option key={id} value={id}>
-                {BOARD_THEMES[id].label}
-              </option>
-            ))}
-          </select>
+          <span className="text-[var(--color-text-muted)] text-sm font-light px-1 select-none" aria-hidden>
+            |
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setHelpOpen(true)} title="Keyboard shortcuts (?)">
+            <Keyboard size={16} />
+          </Button>
         </div>
       </div>
 

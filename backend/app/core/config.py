@@ -19,7 +19,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── App ──────────────────────────────────────────────
+    # App 
     APP_NAME: str = "Chess Analysis Platform"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
@@ -27,14 +27,14 @@ class Settings(BaseSettings):
     LOG_JSON: bool = False
     API_PREFIX: str = "/api/v1"
 
-    # ── CORS ─────────────────────────────────────────────
+    # CORS 
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
-    # ── MongoDB ──────────────────────────────────────────
+    # MongoDB 
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "chess_eval"
 
-    # ── Stockfish ────────────────────────────────────────
+    # Stockfish 
     STOCKFISH_PATH: str = "/usr/local/bin/stockfish"
     STOCKFISH_DEPTH: int = 64
     # 0 = depth-only search (each `go` runs to STOCKFISH_DEPTH). >0 adds movetime cap.
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     # Lines to request when resolving played-move eval from MultiPV in PGN pipeline.
     STOCKFISH_PGN_MULTIPV_LINES: int = 5
 
-    # ── Classifier (centipawn loss from player perspective) ──
+    # Classifier (centipawn loss from player perspective) 
     CLASSIFIER_CP_EXCELLENT: int = 10
     CLASSIFIER_CP_GOOD: int = 25
     CLASSIFIER_CP_INACCURACY: int = 50
@@ -57,30 +57,40 @@ class Settings(BaseSettings):
     CLASSIFIER_BRILLIANT_SWING_PAWNS: float = 1.0
     CLASSIFIER_BRILLIANT_SACRIFICE_CP: int = 80
 
-    # ── Stale analysis cleanup ───────────────────────────
+    # Stale analysis cleanup 
     STALE_PROCESSING_MINUTES: int = 10
 
-    # ── Optional Polyglot opening book (.bin path); empty = disabled ──
+    # Optional Polyglot opening book (.bin path); empty = disabled 
     OPENING_POLYGLOT_PATH: str = ""
     OPENING_POLYGLOT_MAX_PLY: int = 16
+    # ECO "book" for accuracy/classifier: consecutive positions from start only, max index.
+    OPENING_ECO_MAX_BOOK_PLY: int = 18
 
-    # ── Two-pass analysis (cheap depth for swing, then full tiered depth) ──
+    # Two-pass analysis (cheap depth for swing, then full tiered depth) 
     ANALYSIS_CHEAP_PASS_DEPTH: int = 12
     ANALYSIS_TWO_PASS_ENABLED: bool = True
 
-    # ── Chess.com profile cache (Mongo TTL) ──────────────
+    # Lichess-style accuracy: child FEN probes use this depth; 0 = ANALYSIS_CHEAP_PASS_DEPTH.
+    ACCURACY_CHILD_DEPTH: int = 0
+    # Max half-width of sliding Win% window for volatility (full Lichess-style game accuracy).
+    ACCURACY_VOLATILITY_HALF_WINDOW_MAX: int = 6
+    # lichess = full weight in decisive positions (doc default); downweight = reduce volatility weights when |child cp| >= threshold.
+    ACCURACY_DECISIVE_CP_MODE: str = "lichess"
+    ACCURACY_DECISIVE_CP_THRESHOLD_CP: int = 1000
+
+    # Chess.com profile cache (Mongo TTL) 
     CHESSCOM_PROFILE_CACHE_TTL_SECONDS: int = 3600
 
     # After normalizing engine_cache, set true to skip on-read White POV flip for legacy rows.
     CACHE_STRICT_WHITE_POV: bool = False
 
-    # ── Emit structlog JSON (alternative to LOG_JSON on stdlib) ──
+    # Emit structlog JSON (alternative to LOG_JSON on stdlib) 
     STRUCTLOG_JSON: bool = False
 
-    # ── Redis (optional, future use) ─────────────────────
+    # Redis (optional, future use) 
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # ── Analysis ─────────────────────────────────────────
+    # Analysis 
     MAX_ANALYSIS_DEPTH: int = 245
     CACHE_TTL_SECONDS: int = 86400  # 24 hours
     MAX_PGN_SIZE_KB: int = 512

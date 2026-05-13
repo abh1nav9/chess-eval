@@ -1,9 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Crown, Sun, Moon, Plus, Library, BarChart3, BookOpen, LineChart } from 'lucide-react';
+import { Crown, Sun, Moon, Plus } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/Button';
+import { BoardThemeSelect } from '@/components/layout/BoardThemeSelect';
 
 export function Header() {
   const { theme, toggleTheme } = useUIStore();
@@ -24,8 +25,8 @@ export function Header() {
 
   return (
     <header className="h-14 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-primary)]/80 backdrop-blur-xl sticky top-0 z-40">
-      <div className="h-full max-w-[1200px] mx-auto px-6 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5 group">
+      <div className="h-full max-w-[1200px] mx-auto px-6 flex items-center justify-between gap-4">
+        <Link to="/" className="flex items-center gap-2.5 group shrink-0">
           <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--color-accent)] flex items-center justify-center shadow-sm">
             <Crown size={18} className="text-[var(--color-accent-fg)]" />
           </div>
@@ -34,49 +35,23 @@ export function Header() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-3">
-          <Link
-            to="/stats"
-            className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] flex items-center gap-1"
-          >
-            <BarChart3 size={14} aria-hidden />
-            Stats
-          </Link>
-          <Link
-            to="/repertoire"
-            className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] flex items-center gap-1"
-          >
-            <LineChart size={14} aria-hidden />
-            Repertoire
-          </Link>
-          <Link
-            to="/studies"
-            className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] flex items-center gap-1"
-          >
-            <BookOpen size={14} aria-hidden />
-            Studies
-          </Link>
-          <Link
-            to="/library"
-            className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] flex items-center gap-1"
-          >
-            <Library size={14} aria-hidden />
-            Library
-          </Link>
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          <BoardThemeSelect />
           {showNewGame && (
             <Button variant="outline" size="sm" onClick={handleAnalyzeNewGame} className="gap-1.5 shrink-0">
               <Plus size={14} aria-hidden />
               Analyze new game
             </Button>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="w-2 h-2 rounded-full bg-[var(--color-eval-positive)] animate-pulse" />
             <span className="text-xs text-[var(--color-text-muted)]">Engine Ready</span>
           </div>
 
           <button
+            type="button"
             onClick={toggleTheme}
-            className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer shrink-0"
             title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
           >
             {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}

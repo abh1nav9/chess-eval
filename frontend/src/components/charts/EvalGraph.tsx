@@ -15,6 +15,7 @@ import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
 import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 import { useUIStore } from '@/store/uiStore';
+import { evalToBarPercent } from '@/utils/evalBarPercent';
 
 ChartJS.register(
   CategoryScale,
@@ -54,113 +55,132 @@ export function EvalGraph() {
     return pgnResult.moves.map((m, i) => ({
       index: i,
       move: `${m.move_number}${m.color === 'white' ? '.' : '...'} ${m.move}`,
-      eval: Math.max(-5, Math.min(5, m.eval_after)),
+      winPct: evalToBarPercent(m.eval_after, m.mate_in),
       rawEval: m.eval_after,
+      mateIn: m.mate_in,
       classification: m.classification,
     }));
   }, [pgnResult]);
 
   const colors = useMemo(() => getChartColors(theme), [theme]);
 
-  if (data.length === 0) return null;
+  const chartData = useMemo(
+    () => ({
+      labels: data.map((d) => d.move),
+      datasets: [
+        {
+          label: 'White win %',
+          data: data.map((d) => d.winPct),
+          borderColor: colors.line,
+          borderWidth: 1.5,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: colors.pointHoverBg,
+          pointHoverBorderColor: colors.pointHoverBorder,
+          pointHoverBorderWidth: 2,
+          tension: 0.2,
+          fill: true,
+          backgroundColor: (context: any) => {
+            const chart = context.chart;
+            const { ctx, chartArea } = chart;
+            if (!chartArea) return undefined;
 
-  const chartData = {
-    labels: data.map((d) => d.move),
-    datasets: [
-      {
-        label: 'Evaluation',
-        data: data.map((d) => d.eval),
-        borderColor: colors.line,
-        borderWidth: 1.5,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        pointHoverBackgroundColor: colors.pointHoverBg,
-        pointHoverBorderColor: colors.pointHoverBorder,
-        pointHoverBorderWidth: 2,
-        tension: 0.2,
-        fill: true,
-        backgroundColor: (context: any) => {
-          const chart = context.chart;
-          const { ctx, chartArea } = chart;
-          if (!chartArea) return null;
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            gradient.addColorStop(0, 'rgba(5, 150, 105, 0.12)');
+            gradient.addColorStop(0.5, 'rgba(5, 150, 105, 0.02)');
+            gradient.addColorStop(0.5, 'rgba(220, 38, 38, 0.02)');
+            gradient.addColorStop(1, 'rgba(220, 38, 38, 0.12)');
 
-          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-          gradient.addColorStop(0, 'rgba(5, 150, 105, 0.12)');
-          gradient.addColorStop(0.5, 'rgba(5, 150, 105, 0.02)');
-          gradient.addColorStop(0.5, 'rgba(220, 38, 38, 0.02)');
-          gradient.addColorStop(1, 'rgba(220, 38, 38, 0.12)');
-
-          return gradient;
-        },
-      },
-    ],
-  };
-
-  const options: any = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-      mode: 'index',
-      intersect: false,
-    },
-    onClick: (_: any, elements: any[]) => {
-      if (elements.length > 0) {
-        const index = elements[0].index;
-        const prev = useGameStore.getState().currentMoveIndex;
-        setSelectedMove(index);
-        goToMove(index);
-        const snap = useGameStore.getState();
-        gameSoundCoordinator.onBoardNavigation(prev, snap.currentMoveIndex, snap);
-      }
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: colors.tooltipBg,
-        titleColor: colors.tooltipTitle,
-        bodyColor: colors.tooltipBody,
-        borderColor: colors.tooltipBorder,
-        borderWidth: 1,
-        padding: 10,
-        displayColors: false,
-        callbacks: {
-          label: (context: any) => {
-            const val = context.raw as number;
-            return `Eval: ${val > 0 ? '+' : ''}${val.toFixed(2)}`;
+            return gradient;
           },
         },
+      ],
+    }),
+    [data, colors],
+  );
+
+  const options: import('chart.js').ChartOptions<'line'> = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
       },
-      annotation: {
-        annotations: selectedMoveIndex >= 0 ? {
-          line1: {
-            type: 'line',
-            xMin: selectedMoveIndex,
-            xMax: selectedMoveIndex,
-            borderColor: colors.annotationLine,
-            borderWidth: 1,
-            borderDash: [4, 4],
-          }
-        } : {},
+      onClick: (_evt, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const prev = useGameStore.getState().currentMoveIndex;
+          setSelectedMove(index);
+          goToMove(index);
+          const snap = useGameStore.getState();
+          gameSoundCoordinator.onBoardNavigation(prev, snap.currentMoveIndex, snap);
+        }
       },
-    },
-    scales: {
-      x: { display: false },
-      y: {
-        min: -5,
-        max: 5,
-        ticks: {
-          stepSize: 2.5,
-          color: colors.tickColor,
-          font: { size: 9, family: '"JetBrains Mono", monospace' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: colors.tooltipBg,
+          titleColor: colors.tooltipTitle,
+          bodyColor: colors.tooltipBody,
+          borderColor: colors.tooltipBorder,
+          borderWidth: 1,
+          padding: 10,
+          displayColors: false,
+          callbacks: {
+            label: (ctx) => {
+              const idx = ctx.dataIndex;
+              const pt = data[idx];
+              if (!pt) return '';
+              const w = `${pt.winPct.toFixed(1)}% white`;
+              if (pt.mateIn != null) {
+                return `M${Math.abs(pt.mateIn)} · ${w}`;
+              }
+              const e = pt.rawEval;
+              const ev = `${e >= 0 ? '+' : ''}${e.toFixed(2)}`;
+              return `${ev} · ${w}`;
+            },
+          },
         },
-        grid: {
-          color: colors.gridColor,
-          drawBorder: false,
+        annotation: {
+          annotations:
+            selectedMoveIndex >= 0
+              ? {
+                  line1: {
+                    type: 'line',
+                    xMin: selectedMoveIndex,
+                    xMax: selectedMoveIndex,
+                    borderColor: colors.annotationLine,
+                    borderWidth: 1,
+                    borderDash: [4, 4],
+                  },
+                }
+              : {},
         },
-        border: { display: false },
       },
-    },
-  };
+      scales: {
+        x: { display: false },
+        y: {
+          min: 0,
+          max: 100,
+          ticks: {
+            stepSize: 25,
+            color: colors.tickColor,
+            font: { size: 9, family: '"JetBrains Mono", monospace' },
+            callback: (tickValue) => `${tickValue}%`,
+          },
+          grid: {
+            color: colors.gridColor,
+            drawBorder: false,
+          },
+          border: { display: false },
+        },
+      },
+    }),
+    [colors, data, goToMove, selectedMoveIndex, setSelectedMove],
+  );
+
+  if (data.length === 0) return null;
 
   return (
     <div className="w-full h-[80px] py-1">

@@ -12,6 +12,8 @@ interface PlayerInfoProps {
   color: 'white' | 'black';
   active?: boolean;
   clock?: string;
+  /** Position eval (white POV), shown in a strip left of the avatar to align with the eval bar column. */
+  evalDisplay?: string | null;
 }
 
 const PIECE_UNICODE: Record<string, string> = {
@@ -67,6 +69,7 @@ export function PlayerInfo({
   color,
   active,
   clock,
+  evalDisplay,
 }: PlayerInfoProps) {
   const currentFen = useGameStore((s) => s.currentFen);
   const [avatarFailed, setAvatarFailed] = useState(false);
@@ -85,14 +88,20 @@ export function PlayerInfo({
 
   return (
     <div className={`flex items-center justify-between py-1.5 px-1 transition-opacity ${active ? 'opacity-100' : 'opacity-60'}`}>
-      <div className="flex items-center gap-2.5">
-        <div
-          className={`w-7 h-7 rounded overflow-hidden shrink-0 flex items-center justify-center ${
-            color === 'white'
-              ? 'bg-[var(--color-white-square)] text-[#333]'
-              : 'bg-[var(--color-black-square)] text-white border border-[var(--color-border-subtle)]'
-          }`}
-        >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2 shrink-0">
+          {evalDisplay ? (
+            <span className="w-7 text-right text-[10px] font-mono font-semibold tabular-nums tracking-tight text-[var(--color-text-secondary)] leading-none self-center">
+              {evalDisplay}
+            </span>
+          ) : null}
+          <div
+            className={`w-7 h-7 rounded overflow-hidden shrink-0 flex items-center justify-center ${
+              color === 'white'
+                ? 'bg-[var(--color-white-square)] text-[#333]'
+                : 'bg-[var(--color-black-square)] text-white border border-[var(--color-border-subtle)]'
+            }`}
+          >
           {avatarUrl && !avatarFailed ? (
             <img
               src={proxiedChessComAvatarUrl(avatarUrl) ?? avatarUrl}
@@ -103,8 +112,9 @@ export function PlayerInfo({
           ) : (
             <User size={14} />
           )}
+          </div>
         </div>
-        <div className="flex flex-col">
+        <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {title ? (
               <span className="text-[10px] font-bold font-mono text-amber-500/95 tracking-tight">

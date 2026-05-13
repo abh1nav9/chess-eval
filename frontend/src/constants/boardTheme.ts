@@ -1,4 +1,4 @@
-export type BoardThemeId = 'classic' | 'brown' | 'gray' | 'blue';
+export type BoardThemeId = 'classic' | 'brown' | 'gray' | 'blue' | 'pink';
 
 export const BOARD_THEMES: Record<
   BoardThemeId,
@@ -8,4 +8,5 @@ export const BOARD_THEMES: Record<
   brown: { label: 'Brown', dark: '#b58863', light: '#f0d9b5' },
   gray: { label: 'Gray', dark: '#727272', light: '#c5c5c5' },
   blue: { label: 'Blue', dark: '#4a6fa5', light: '#d6e4ff' },
+  pink: { label: 'Pink', dark: '#c05684', light: '#fde7f1' },
 };

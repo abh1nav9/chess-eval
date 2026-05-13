@@ -11,6 +11,7 @@ import { analysisService } from '@/services/analysisService';
 import { classifyLiveMove } from '@/utils/classifyLiveMove';
 import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 import { BOARD_THEMES } from '@/constants/boardTheme';
+import { ANALYSIS_BOARD_PIXEL_SIZE } from '@/constants/boardLayout';
 import { useUIStore } from '@/store/uiStore';
 
 type ArrowTuple = [Square, Square, string?];
@@ -88,8 +89,9 @@ function getLegalMovesForSquare(fen: string, square: Square): Square[] {
 /** Get current eval from the best available source. */
 function getCurrentEval(): number {
   const { pgnResult, fenResult, selectedMoveIndex } = useAnalysisStore.getState();
+  const { isExploring } = useGameStore.getState();
 
-  if (fenResult) return fenResult.eval;
+  if (isExploring && fenResult) return fenResult.eval;
 
   if (pgnResult && selectedMoveIndex >= 0 && selectedMoveIndex < pgnResult.moves.length) {
     return pgnResult.moves[selectedMoveIndex].eval_after;
@@ -97,6 +99,7 @@ function getCurrentEval(): number {
   if (pgnResult && pgnResult.moves.length > 0) {
     return pgnResult.moves[0].eval_before;
   }
+  if (fenResult) return fenResult.eval;
   return 0;
 }
 
@@ -107,7 +110,6 @@ export function ChessBoard() {
   const {
     pgnResult,
     selectedMoveIndex,
-    setFENResult,
     explorationMoves,
     addExplorationMove,
     clearExplorationMoves,
@@ -271,7 +273,10 @@ export function ChessBoard() {
       analysisService
         .analyzeFEN({ fen: newFen, num_lines: 3 })
         .then((result) => {
-          setFENResult(result);
+          const { pgnResult: hasPgn, setFENResult, setExplorationFenEval } =
+            useAnalysisStore.getState();
+          if (hasPgn) setExplorationFenEval(result);
+          else setFENResult(result);
 
           const moveUci = `${from}${to}`;
           const cls = classifyLiveMove(
@@ -303,7 +308,7 @@ export function ChessBoard() {
 
       return true;
     },
-    [makeMove, setFENResult, addExplorationMove, clearExplorationMoves, explorationMoves],
+    [makeMove, addExplorationMove, clearExplorationMoves, explorationMoves],
   );
 
   const onPieceDrop = useCallback(
@@ -362,7 +367,7 @@ export function ChessBoard() {
         id="analysis-board"
         position={currentFen}
         boardOrientation={orientation}
-        boardWidth={560}
+        boardWidth={ANALYSIS_BOARD_PIXEL_SIZE}
         arePiecesDraggable={true}
         onPieceDrop={onPieceDrop}
         onSquareClick={onSquareClick}

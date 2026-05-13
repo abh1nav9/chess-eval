@@ -34,6 +34,9 @@ export interface MoveEvaluation {
   mate_in: number | null;
   phase?: string | null;
   comment?: string | null;
+  lichess_accuracy?: number | null;
+  lichess_win_pct_played?: number | null;
+  lichess_played_cp_white_pov?: number | null;
 }
 
 export interface GameMetadata {

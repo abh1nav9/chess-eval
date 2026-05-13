@@ -1,13 +1,13 @@
 # ChessEval
 
-ChessEval is a production-grade, open-source chess analysis platform. It combines a Python/FastAPI backend (async Stockfish jobs, MongoDB, WebSocket progress) with a React/Vite frontend: interactive board with eval bar, move list, engine lines, eval chart, optional move sounds, and board flip with player labels aligned to each side.
+ChessEval is a production-grade, open-source chess analysis platform. It combines a Python/FastAPI backend (async Stockfish jobs, MongoDB, WebSocket progress) with a React/Vite frontend: interactive board with a Win%-style eval bar (Lichess-style sigmoid, same mapping as the eval chart), move list, engine lines, optional move sounds, light/dark chrome, and **board-themed** UI accents (`data-board-theme`) so the shell matches the selected board palette (classic, brown, gray, blue, pink). Board flip keeps player rows aligned to each side; PGN exploration updates live eval without clearing the move list.
 
 ## Project Structure
 
 The project is split into two primary applications:
 
 1. **[Backend API](./backend/README.md)**: A Python FastAPI service that parses PGNs, runs Stockfish evaluations via `python-chess`, and stores results in MongoDB.
-2. **[Frontend Client](./frontend/README.md)**: A React SPA that renders the interactive chess board, evaluation graphs (via Chart.js), engine lines, optional Chess.com profile import (server-proxied; titles, names, avatars on the list and analysis board chrome), and move sounds in a minimalist dark-mode UI.
+2. **[Frontend Client](./frontend/README.md)**: A React SPA that renders the interactive chess board, evaluation graph (Chart.js; **white win %** on the Y-axis, same formula as the eval bar), engine lines, optional Chess.com profile import (server-proxied; titles, names, avatars on the list and analysis board chrome), move sounds, and a **light/dark** theme toggle plus **chromatic** styling tied to the board theme.
 
 ## Getting Started
 

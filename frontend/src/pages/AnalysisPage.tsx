@@ -13,6 +13,7 @@ import { useGameStore } from '@/store/gameStore';
 import { useAnalysisWebSocket } from '@/hooks/useAnalysisWebSocket';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resolveChessComPlayerBar } from '@/utils/chessComBoardOverlay';
+import { formatEvalDisplay } from '@/utils/formatEvalDisplay';
 
 export function AnalysisPage() {
   const {
@@ -77,19 +78,16 @@ export function AnalysisPage() {
     ? accLabel(boardTopIsBlack ? pgnResult.summary.white_accuracy : pgnResult.summary.black_accuracy)
     : null;
 
+  const evalDisplay = hasAnalysis ? formatEvalDisplay(currentEval, currentMateIn) : null;
+
   return (
     <PageShell>
       <AnalysisErrorBoundary>
       {!hasAnalysis && !isAnalyzing && !pendingAnalysisId ? (
         <SetupView />
       ) : (
-        <div className="flex gap-4 items-start justify-center min-h-[calc(100vh-80px)] px-4 py-4">
-          {/* Left: Eval Bar + Board */}
-          <div className="flex gap-2 items-start shrink-0">
-            {hasAnalysis && (
-              <EvalBar eval_score={currentEval} mate_in={currentMateIn} />
-            )}
-            <BoardErrorBoundary>
+        <div className="flex gap-4 items-start justify-center min-h-[calc(100vh-80px)] px-4 py-4 overflow-x-visible">
+          <BoardErrorBoundary>
             <div>
               <PlayerInfo
                 name={topBar.lineName}
@@ -99,8 +97,16 @@ export function AnalysisPage() {
                 rating={boardTopIsBlack ? pgnResult?.metadata.black_elo : pgnResult?.metadata.white_elo}
                 color={boardTopIsBlack ? 'black' : 'white'}
                 active={boardTopIsBlack ? !!blackToMove : !!whiteToMove}
+                evalDisplay={evalDisplay}
               />
-              <div className="my-1">
+              <div className="my-1 flex gap-2 items-start overflow-visible">
+                {hasAnalysis && (
+                  <EvalBar
+                    eval_score={currentEval}
+                    mate_in={currentMateIn}
+                    whiteOnScreenBottom={orientation === 'white'}
+                  />
+                )}
                 <ChessBoard />
               </div>
               <PlayerInfo
@@ -111,11 +117,11 @@ export function AnalysisPage() {
                 rating={boardTopIsBlack ? pgnResult?.metadata.white_elo : pgnResult?.metadata.black_elo}
                 color={boardTopIsBlack ? 'white' : 'black'}
                 active={boardTopIsBlack ? !!whiteToMove : !!blackToMove}
+                evalDisplay={evalDisplay}
               />
               <BoardControls />
             </div>
-            </BoardErrorBoundary>
-          </div>
+          </BoardErrorBoundary>
 
           {/* Right: Sidebar */}
           <AnalysisSidebar />

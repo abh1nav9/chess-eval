@@ -39,6 +39,8 @@ interface AnalysisState {
 
   setPGNResult: (result: PGNAnalysisResult) => void;
   setFENResult: (result: FENAnalysisResult) => void;
+  /** Engine eval for a branched position; does not clear pgnResult or explorationMoves. */
+  setExplorationFenEval: (result: FENAnalysisResult) => void;
   setAnalyzing: (loading: boolean) => void;
   setPendingAnalysisId: (id: string | null) => void;
   setProgress: (progress: AnalysisProgressState | null) => void;
@@ -87,6 +89,11 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       analysisProgress: null,
       selectedMoveIndex: -1,
       explorationMoves: [],
+    }),
+  setExplorationFenEval: (result) =>
+    set({
+      fenResult: result,
+      isAnalyzing: false,
     }),
   setAnalyzing: (loading) => set({ isAnalyzing: loading }),
   setPendingAnalysisId: (id) => set({ pendingAnalysisId: id, isAnalyzing: true }),

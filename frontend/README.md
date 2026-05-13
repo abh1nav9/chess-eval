@@ -1,10 +1,10 @@
 # ChessEval Frontend
 
-Vite + React + TypeScript SPA for submitting games or FEN positions, watching async PGN analysis, and exploring results on an interactive board with eval bar, move list, engine lines, summary, and eval chart.
+Vite + React + TypeScript SPA for submitting games or FEN positions, watching async PGN analysis, and exploring results on an interactive board with Win%-mapped eval bar and chart, move list, engine lines, summary, and board-themed UI.
 
 ## Architecture
 
-The UI is a client-only app that talks to the **ChessEval backend** over HTTP and (for PGN jobs) **WebSocket**. State is split by concern: server-backed analysis in Zustand + TanStack Query, board replay in a dedicated game store, and lightweight UI chrome (tabs) in a small UI store.
+The UI is a client-only app that talks to the **ChessEval backend** over HTTP and (for PGN jobs) **WebSocket**. State is split by concern: server-backed analysis in Zustand + TanStack Query, board replay in a dedicated game store, and UI chrome (tabs, **light/dark theme**, **board theme**, sidebar) in `uiStore` (persisted in `localStorage`).
 
 ```mermaid
 flowchart LR
@@ -32,11 +32,15 @@ flowchart LR
 **What the app does today**
 
 1. **Setup** (`SetupView`): user pastes **PGN** or opens **Chess.com**, enters a public username; the app calls `GET /api/v1/chesscom/player/{user}/recent-games` (backend proxy—Chess.com blocks browser CORS). The response includes each game’s PGN plus **`player_profiles`** (from Chess.com `pub/player/{username}`: display name, FIDE-style **title**, **avatar** URL) and per-game **`white_*` / `black_*`** display fields. The game list shows title + name + rating. **Analyze** sends the same **`POST /api/v1/analyze/pgn`** + WebSocket flow as a pasted PGN (only `pgn` is posted to the API); the client stores **`analysis_id`**, loads the PGN into **`gameStore`**, and opens a **WebSocket** for **`progress`** / **`completed`** / **`failed`**. For Chess.com rows it also sets **`chessComPlayerOverlay`** in **`analysisStore`** so **`PlayerInfo`** can show **GM / IM** (etc.), real names, and avatars (**`referrerPolicy="no-referrer"`**, with icon fallback if the image fails). Pasting PGN or loading a stored analysis clears that overlay; **Re-analyze** keeps the overlay when it was already set. FEN submit uses `POST /api/v1/analyze/fen` and shows a single-position result (when enabled in the UI); FEN mode clears the Chess.com overlay.
-2. **Analysis page**: chessboard (`react-chessboard` + `chess.js` FEN history), **eval bar** tied to the selected move’s engine eval, **board controls** (first/prev/next/last + flip + keyboard) synced with **`selectedMoveIndex`**, sidebar tabs (**Moves** list with classifications, **Engine** lines for the current position when applicable, **Summary**), and **eval graph** (Chart.js) for the whole game. **Flip board** swaps which player row sits above or below the board so names match the side you are sitting on.
-3. **Live exploration**: from the analyzed position you can play alternate moves on the board; the client requests a FEN analysis and shows a live classification badge (same store flow as PGN line selection).
+2. **Analysis page**: chessboard (`react-chessboard` + `chess.js` FEN history), **eval bar** (strip height matches board; fill uses **`evalToBarPercent`** in `src/utils/evalBarPercent.ts`—Lichess-style sigmoid on centipawns from API **pawns** white POV, plus asymptotic mate heights; bar square colors follow `--color-white-square` / `--color-black-square`). **PlayerInfo** shows the same eval string to the **left of avatars** when analysis is loaded. **Board controls** (first/prev/next/last + flip + keyboard) stay synced with **`selectedMoveIndex`**. Sidebar tabs (**Moves**, **Engine**, **Summary**). **Eval graph** (Chart.js): Y-axis is **white win %** (0–100%), same `evalToBarPercent` as the bar; tooltips show pawn eval (or mate) and win %. **Flip board** swaps which player row sits above or below the board.
+3. **Live exploration**: from the analyzed position you can play alternate moves on the board; the client requests FEN analysis and merges live eval into the store **without clearing** the PGN move list (`setExplorationFenEval` path).
 4. **Sounds**: MP3s under `public/sounds/` are driven by **`GameSoundCoordinator`** (`src/audio/`): game start or timeout (from PGN `[Termination]` when present) when analysis is ready; move outcomes (piece move, capture, castle, check, mate, stalemate) on user moves and on line navigation (forward and single-step back; jump-to-start uses a generic move clip).
 5. **Progress overlay**: while a PGN job is running, a modal shows engine progress; it clears when the WebSocket delivers `completed` with the full result.
-6. **Styling**: Tailwind CSS v4 with design tokens in `src/index.css` (dark “Linear-style” theme).
+6. **Styling**: Tailwind CSS v4 with semantic tokens in `src/index.css` (light/dark via `data-theme` on `html`, persisted in `uiStore`). **`src/styles/boardChrome.css`** (loaded after base CSS) overrides backgrounds, borders, accents, and board square CSS variables per **`data-board-theme`** (`classic` | `brown` | `gray` | `blue` | `pink`) so the app chrome matches the selected board palette. Board width/height constant: `src/constants/boardLayout.ts` (`ANALYSIS_BOARD_PIXEL_SIZE`).
+
+**Eval mapping (reference)**
+
+Design notes and formulas live in the repo root **`evalbar.md`** (sigmoid constant, mate curve, comparison to Chess.com linear). The implemented helpers are `cpToBarPercent`, `mateToBarPercent`, and `evalToBarPercent` in **`src/utils/evalBarPercent.ts`**; labels use **`src/utils/formatEvalDisplay.ts`**.
 
 **Integration notes**
 
@@ -86,7 +90,9 @@ Output: `dist/`. Preview locally: `npm run preview`.
 | `src/store/` | `analysisStore`, `gameStore`, `uiStore` |
 | `src/hooks/` | PGN/FEN mutations, WebSocket subscription |
 | `src/services/` | Axios API client (`analysisService`, `chessComService`) |
-| `src/utils/` | Helpers (e.g. live move classification, PGN termination parse, replay helpers for sounds, **`chessComBoardOverlay`** for Chess.com → board chrome) |
+| `src/utils/` | **`evalBarPercent`** (bar + chart white win %), **`formatEvalDisplay`**, live move classification, PGN termination, sound replay, **`chessComBoardOverlay`** |
+| `src/styles/` | Per-board chromatic overrides (`boardChrome.css`) |
+| `src/constants/boardLayout.ts` | Analysis board pixel size (eval bar height) |
 | `src/types/` | Shared TS types aligned with backend payloads |
 | `public/sounds/` | Board / session MP3 assets |
 

@@ -51,7 +51,7 @@ export function PGNInput() {
 
       <div className="pt-3 mt-3 border-t border-[var(--color-border-subtle)] space-y-2">
         <p className="text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
-          Bulk multi-game PGN (§7.4)
+          Bulk multi-game PGN
         </p>
         <input
           ref={fileRef}
@@ -66,7 +66,7 @@ export function PGNInput() {
               setBulkMsg(null);
               try {
                 const r = await analysisService.uploadBulkPgn(f);
-                setBulkMsg(`Queued ${r.count} game(s). Open Library to track progress.`);
+                setBulkMsg(`Queued ${r.count} game(s). Analysis jobs run in the background.`);
               } catch (err) {
                 setBulkMsg(err instanceof Error ? err.message : 'Bulk upload failed');
               }
