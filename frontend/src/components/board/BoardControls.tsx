@@ -1,12 +1,28 @@
 import { useGameStore } from '@/store/gameStore';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { Button } from '@/components/ui/Button';
-import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import {
+  ChevronFirst,
+  ChevronLast,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+} from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 
-function syncPgnMoveSelection() {
-  if (!useAnalysisStore.getState().pgnResult) return;
-  useAnalysisStore.getState().setSelectedMove(useGameStore.getState().currentMoveIndex);
+function syncSelection() {
+  const { isExploring } = useGameStore.getState();
+  const { pgnResult, clearExplorationMoves } = useAnalysisStore.getState();
+
+  if (!isExploring && pgnResult) {
+    // Following PGN: sync analysis selectedMoveIndex
+    useAnalysisStore.getState().setSelectedMove(useGameStore.getState().currentMoveIndex);
+  }
+
+  // When PGN is restored (not exploring), clear stale exploration data
+  if (!isExploring) {
+    clearExplorationMoves();
+  }
 }
 
 export function BoardControls() {
@@ -18,10 +34,9 @@ export function BoardControls() {
 
   const runNav = useCallback((action: () => void) => {
     action();
-    syncPgnMoveSelection();
+    syncSelection();
   }, []);
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
@@ -53,22 +68,22 @@ export function BoardControls() {
   }, [runNav, flipBoard, firstMove, prevMove, nextMove, lastMove]);
 
   return (
-    <div className="flex items-center justify-center gap-1.5 mt-3">
+    <div className="flex items-center justify-center gap-1 mt-3">
       <Button variant="ghost" size="sm" onClick={flipBoard} title="Flip board (F)">
-        <RotateCcw size={16} />
+        <RotateCcw size={18} />
       </Button>
       <div className="w-px h-6 bg-[var(--color-border)] mx-1" />
       <Button variant="ghost" size="sm" onClick={() => runNav(firstMove)} disabled={isAtStart} title="First move (Home)">
-        <ChevronFirst size={16} />
+        <ChevronFirst size={20} />
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => runNav(prevMove)} disabled={isAtStart} title="Previous (←)">
-        <ChevronLeft size={16} />
+      <Button variant="ghost" size="sm" onClick={() => runNav(prevMove)} disabled={isAtStart} title="Previous (Left Arrow)">
+        <ChevronLeft size={20} />
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => runNav(nextMove)} disabled={isAtEnd} title="Next (→)">
-        <ChevronRight size={16} />
+      <Button variant="ghost" size="sm" onClick={() => runNav(nextMove)} disabled={isAtEnd} title="Next (Right Arrow)">
+        <ChevronRight size={20} />
       </Button>
       <Button variant="ghost" size="sm" onClick={() => runNav(lastMove)} disabled={isAtEnd} title="Last move (End)">
-        <ChevronLast size={16} />
+        <ChevronLast size={20} />
       </Button>
     </div>
   );

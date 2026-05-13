@@ -134,8 +134,13 @@ class StockfishEngine:
         fen: str,
         num_lines: int = 3,
         depth: Optional[int] = None,
+        movetime: int = 5000,
     ) -> List[EngineResult]:
-        """Analyze a position and return multiple principal variations."""
+        """Analyze a position and return multiple principal variations.
+
+        Args:
+            movetime: Max ms per position (caps depth search). Prevents hangs on complex positions.
+        """
         async with self._lock:
             if not self._ready:
                 raise RuntimeError("Engine not initialized. Call start() first.")
@@ -147,10 +152,11 @@ class StockfishEngine:
             await self._wait_for("readyok", timeout=5.0)
 
             await self._send_command(f"position fen {fen}")
-            await self._send_command(f"go depth {depth}")
+            await self._send_command(f"go depth {depth} movetime {movetime}")
 
+            parse_timeout = (movetime / 1000.0) + 10.0
             results = await self._parse_multi_pv_output(
-                num_lines=num_lines, timeout=max(90.0, float(depth) * 3.0)
+                num_lines=num_lines, timeout=parse_timeout
             )
 
             # Reset MultiPV

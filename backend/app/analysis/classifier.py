@@ -9,11 +9,13 @@ from typing import Optional
 
 class Classification(str, Enum):
     BRILLIANT = "brilliant"
+    GREAT = "great"
     BEST = "best"
     EXCELLENT = "excellent"
     GOOD = "good"
     INACCURACY = "inaccuracy"
     MISTAKE = "mistake"
+    MISS = "miss"
     BLUNDER = "blunder"
     BOOK = "book"
 
@@ -30,11 +32,13 @@ THRESHOLDS = {
 # Weights for accuracy calculation (higher = worse)
 ACCURACY_WEIGHTS = {
     Classification.BRILLIANT: 0,
+    Classification.GREAT: 0,
     Classification.BEST: 0,
     Classification.EXCELLENT: 2,
     Classification.GOOD: 5,
     Classification.INACCURACY: 15,
     Classification.MISTAKE: 40,
+    Classification.MISS: 60,
     Classification.BLUNDER: 80,
     Classification.BOOK: 0,
 }
@@ -96,6 +100,14 @@ class MoveClassifier:
         if mate_class is not None:
             return mate_class
 
+        # "Miss" — had a winning position (>=2.0 advantage) and threw it away significantly
+        multiplier = 1.0 if color == "white" else -1.0
+        player_advantage_before = best_move_eval * multiplier
+        player_advantage_after = eval_after * multiplier
+        if player_advantage_before >= 2.0 and cp_loss > THRESHOLDS["mistake"]:
+            if player_advantage_after < 0.5:
+                return Classification.MISS
+
         # Standard classification by centipawn loss
         if cp_loss <= THRESHOLDS["excellent"]:
             return Classification.EXCELLENT
@@ -121,12 +133,14 @@ class MoveClassifier:
         if mate_best is not None and mate_before is None:
             return Classification.BRILLIANT
 
-        # Significant swing in favor = brilliant
+        # Swing from the player's perspective
         multiplier = 1.0 if color == "white" else -1.0
         swing = (best_eval - eval_before) * multiplier
 
-        if swing > 2.0:  # Found a move gaining 2+ pawns
+        if swing > 2.0:
             return Classification.BRILLIANT
+        if swing > 1.0:
+            return Classification.GREAT
 
         return Classification.BEST
 
@@ -159,12 +173,12 @@ class MoveClassifier:
         """Check for mate-related transitions that override cp-based classification."""
         is_white = color == "white"
 
-        # Had a forced mate, lost it → blunder
+        # Had a forced mate, lost it → miss (threw away a win)
         if mate_best is not None:
             winning_mate = (mate_best > 0 and is_white) or (mate_best < 0 and not is_white)
             if winning_mate and mate_after is None:
-                return Classification.BLUNDER
-            # Had mate, still have mate but slower → mistake/inaccuracy
+                return Classification.MISS
+            # Had mate, still have mate but slower → inaccuracy
             if winning_mate and mate_after is not None:
                 if is_white and mate_after > 0 and mate_after > mate_best:
                     return Classification.INACCURACY

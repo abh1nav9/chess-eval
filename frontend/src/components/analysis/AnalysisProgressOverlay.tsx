@@ -37,7 +37,7 @@ function AnalysisProgressTrack({ percentage }: AnalysisProgressTrackProps) {
   const pct = Math.min(100, Math.max(0, percentage));
   return (
     <div
-      className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-white/[0.08] ring-1 ring-inset ring-white/[0.08]"
+      className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-[var(--color-bg-hover)] ring-1 ring-inset ring-[var(--color-border)]"
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}

@@ -127,11 +127,11 @@ STOCKFISH_HASH_MB=256
 ## Run the API
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8888
 ```
 
-- API base: `http://localhost:8000`
-- OpenAPI: `http://localhost:8000/docs`
+- API base: `http://localhost:8888`
+- OpenAPI: `http://localhost:8888/docs`
 
 ## Project layout
 

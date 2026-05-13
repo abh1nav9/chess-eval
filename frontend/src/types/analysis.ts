@@ -1,11 +1,13 @@
 // Move classification types matching the backend
 export type MoveClassification =
   | 'brilliant'
+  | 'great'
   | 'best'
   | 'excellent'
   | 'good'
   | 'inaccuracy'
   | 'mistake'
+  | 'miss'
   | 'blunder'
   | 'book';
 

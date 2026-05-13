@@ -19,7 +19,7 @@ export function SetupView() {
           Chess Game Analysis
         </h1>
         <p className="text-[var(--color-text-muted)] text-lg max-w-md mx-auto">
-          Upload your PGN or FEN to get deep engine insights and move classifications.
+          Upload your PGN to get deep engine insights and move classifications.
         </p>
       </motion.div>
 
@@ -30,7 +30,7 @@ export function SetupView() {
         className="w-full"
       >
         <Card padding="lg" className="linear-card">
-          <div className="flex gap-2 mb-6 p-1 bg-zinc-900/50 rounded-[var(--radius-md)] border border-white/5">
+          <div className="flex gap-2 mb-6 p-1 bg-[var(--color-bg-hover)] rounded-[var(--radius-md)] border border-[var(--color-border-subtle)]">
             <button
               onClick={() => setInputMode('pgn')}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-[var(--radius-sm)] transition-all cursor-pointer ${
@@ -63,7 +63,7 @@ export function SetupView() {
         <div className="mt-8 flex items-center justify-center gap-6 text-[var(--color-text-muted)]">
           <div className="flex items-center gap-2 text-xs">
             <Sparkles size={14} className="text-[var(--color-accent)]" />
-            <span>Stockfish 16.1 NNUE</span>
+            <span>Stockfish 18</span>
           </div>
           <div className="flex items-center gap-2 text-xs">
             <FileText size={14} className="text-[var(--color-accent)]" />

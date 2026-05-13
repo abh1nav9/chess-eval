@@ -1,34 +1,115 @@
+import { useMemo } from 'react';
 import { User } from 'lucide-react';
+import { useGameStore } from '@/store/gameStore';
 
 interface PlayerInfoProps {
   name: string;
   rating?: string;
   color: 'white' | 'black';
   active?: boolean;
+  clock?: string;
 }
 
-export function PlayerInfo({ name, rating, color, active }: PlayerInfoProps) {
+const PIECE_UNICODE: Record<string, string> = {
+  q: '\u265B', Q: '\u2655',
+  r: '\u265C', R: '\u2656',
+  b: '\u265D', B: '\u2657',
+  n: '\u265E', N: '\u2658',
+  p: '\u265F', P: '\u2659',
+};
+
+const PIECE_VALUE: Record<string, number> = { q: 9, r: 5, b: 3, n: 3, p: 1 };
+const PIECE_ORDER = ['q', 'r', 'b', 'n', 'p'];
+
+function getCapturedPieces(fen: string) {
+  const board = fen.split(' ')[0];
+
+  const startingPieces: Record<string, number> = {
+    K: 1, Q: 1, R: 2, B: 2, N: 2, P: 8,
+    k: 1, q: 1, r: 2, b: 2, n: 2, p: 8,
+  };
+
+  const current: Record<string, number> = {};
+  for (const ch of board) {
+    if (/[a-zA-Z]/.test(ch) && ch in startingPieces) {
+      current[ch] = (current[ch] || 0) + 1;
+    }
+  }
+
+  const whiteCaptured: string[] = [];
+  const blackCaptured: string[] = [];
+
+  for (const piece of PIECE_ORDER) {
+    const upper = piece.toUpperCase();
+    const missingWhite = (startingPieces[upper] || 0) - (current[upper] || 0);
+    const missingBlack = (startingPieces[piece] || 0) - (current[piece] || 0);
+
+    for (let i = 0; i < missingWhite; i++) blackCaptured.push(upper);
+    for (let i = 0; i < missingBlack; i++) whiteCaptured.push(piece);
+  }
+
+  const whiteValue = whiteCaptured.reduce((s, p) => s + (PIECE_VALUE[p.toLowerCase()] || 0), 0);
+  const blackValue = blackCaptured.reduce((s, p) => s + (PIECE_VALUE[p.toLowerCase()] || 0), 0);
+
+  return { whiteCaptured, blackCaptured, advantage: whiteValue - blackValue };
+}
+
+export function PlayerInfo({ name, rating, color, active, clock }: PlayerInfoProps) {
+  const currentFen = useGameStore((s) => s.currentFen);
+
+  const { captured, advantage } = useMemo(() => {
+    const { whiteCaptured, blackCaptured, advantage } = getCapturedPieces(currentFen);
+    return {
+      captured: color === 'white' ? whiteCaptured : blackCaptured,
+      advantage: color === 'white' ? advantage : -advantage,
+    };
+  }, [currentFen, color]);
+
   return (
-    <div className={`flex items-center justify-between py-2 px-1 transition-opacity ${active ? 'opacity-100' : 'opacity-60'}`}>
-      <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center shadow-inner ${
-          color === 'white' ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-400 border border-white/5'
+    <div className={`flex items-center justify-between py-1.5 px-1 transition-opacity ${active ? 'opacity-100' : 'opacity-60'}`}>
+      <div className="flex items-center gap-2.5">
+        <div className={`w-7 h-7 rounded flex items-center justify-center ${
+          color === 'white'
+            ? 'bg-[var(--color-white-square)] text-[#333]'
+            : 'bg-[var(--color-black-square)] text-white border border-[var(--color-border-subtle)]'
         }`}>
-          <User size={16} />
+          <User size={14} />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-[var(--color-text-primary)] tracking-tight">
-            {name}
-          </span>
-          {rating && (
-            <span className="text-[10px] font-mono bg-zinc-800/50 px-1.5 py-0.5 rounded text-[var(--color-text-muted)] border border-white/5">
-              {rating}
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-[var(--color-text-primary)] tracking-tight">
+              {name}
             </span>
+            {rating && (
+              <span className="text-[10px] font-mono bg-[var(--color-bg-hover)] px-1.5 py-0.5 rounded text-[var(--color-text-muted)] border border-[var(--color-border-subtle)]">
+                {rating}
+              </span>
+            )}
+          </div>
+          {captured.length > 0 && (
+            <div className="flex items-center gap-0.5 mt-0.5">
+              <span className="text-[13px] leading-none tracking-tighter opacity-70">
+                {captured.map((p, i) => (
+                  <span key={i}>{PIECE_UNICODE[p]}</span>
+                ))}
+              </span>
+              {advantage > 0 && (
+                <span className="text-[10px] font-mono text-[var(--color-text-muted)] ml-1">
+                  +{advantage}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
-      
-      {/* Capture indicator or secondary info could go here */}
+
+      {clock && (
+        <div className="flex items-center gap-1.5 bg-[var(--color-bg-hover)] px-2 py-1 rounded border border-[var(--color-border-subtle)]">
+          <span className="text-xs font-mono font-semibold text-[var(--color-text-primary)]">
+            {clock}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

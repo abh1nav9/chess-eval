@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,6 +13,7 @@ import { Line } from 'react-chartjs-2';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
+import { useUIStore } from '@/store/uiStore';
 
 ChartJS.register(
   CategoryScale,
@@ -25,9 +26,26 @@ ChartJS.register(
   annotationPlugin
 );
 
+function getChartColors(theme: 'light' | 'dark') {
+  const isDark = theme === 'dark';
+  return {
+    line: isDark ? '#a1a1aa' : '#71717a',
+    pointHoverBg: isDark ? '#ffffff' : '#1a1a1a',
+    pointHoverBorder: isDark ? '#000000' : '#ffffff',
+    tooltipBg: isDark ? '#111111' : '#ffffff',
+    tooltipTitle: isDark ? '#ededed' : '#1a1a1a',
+    tooltipBody: isDark ? '#a1a1aa' : '#52525b',
+    tooltipBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+    annotationLine: isDark ? '#ffffff' : '#1a1a1a',
+    tickColor: isDark ? '#71717a' : '#a1a1aa',
+    gridColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+  };
+}
+
 export function EvalGraph() {
   const { pgnResult, selectedMoveIndex, setSelectedMove } = useAnalysisStore();
   const { goToMove } = useGameStore();
+  const theme = useUIStore((s) => s.theme);
   const chartRef = useRef<ChartJS<'line'> | null>(null);
 
   const data = useMemo(() => {
@@ -35,11 +53,13 @@ export function EvalGraph() {
     return pgnResult.moves.map((m, i) => ({
       index: i,
       move: `${m.move_number}${m.color === 'white' ? '.' : '...'} ${m.move}`,
-      eval: Math.max(-5, Math.min(5, m.eval_after)), // clamp for display
+      eval: Math.max(-5, Math.min(5, m.eval_after)),
       rawEval: m.eval_after,
       classification: m.classification,
     }));
   }, [pgnResult]);
+
+  const colors = useMemo(() => getChartColors(theme), [theme]);
 
   if (data.length === 0) return null;
 
@@ -49,29 +69,26 @@ export function EvalGraph() {
       {
         label: 'Evaluation',
         data: data.map((d) => d.eval),
-        borderColor: '#a1a1aa',
+        borderColor: colors.line,
         borderWidth: 1.5,
         pointRadius: 0,
         pointHoverRadius: 4,
-        pointHoverBackgroundColor: '#ffffff',
-        pointHoverBorderColor: '#000000',
+        pointHoverBackgroundColor: colors.pointHoverBg,
+        pointHoverBorderColor: colors.pointHoverBorder,
         pointHoverBorderWidth: 2,
-        tension: 0.2, // slight curve
+        tension: 0.2,
         fill: true,
         backgroundColor: (context: any) => {
           const chart = context.chart;
           const { ctx, chartArea } = chart;
           if (!chartArea) return null;
-          
-          // Create gradient from top to bottom
+
           const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-          // Positive eval (green) at top
           gradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
           gradient.addColorStop(0.5, 'rgba(16, 185, 129, 0.02)');
-          // Negative eval (red) at bottom
           gradient.addColorStop(0.5, 'rgba(239, 68, 68, 0.02)');
           gradient.addColorStop(1, 'rgba(239, 68, 68, 0.2)');
-          
+
           return gradient;
         },
       },
@@ -93,14 +110,12 @@ export function EvalGraph() {
       }
     },
     plugins: {
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
       tooltip: {
-        backgroundColor: '#111111',
-        titleColor: '#ededed',
-        bodyColor: '#a1a1aa',
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: colors.tooltipBg,
+        titleColor: colors.tooltipTitle,
+        bodyColor: colors.tooltipBody,
+        borderColor: colors.tooltipBorder,
         borderWidth: 1,
         padding: 10,
         displayColors: false,
@@ -117,7 +132,7 @@ export function EvalGraph() {
             type: 'line',
             xMin: selectedMoveIndex,
             xMax: selectedMoveIndex,
-            borderColor: '#ffffff',
+            borderColor: colors.annotationLine,
             borderWidth: 1,
             borderDash: [4, 4],
           }
@@ -125,33 +140,26 @@ export function EvalGraph() {
       },
     },
     scales: {
-      x: {
-        display: false,
-      },
+      x: { display: false },
       y: {
         min: -5,
         max: 5,
         ticks: {
           stepSize: 2.5,
-          color: '#71717a',
-          font: {
-            size: 9,
-            family: '"JetBrains Mono", monospace'
-          },
+          color: colors.tickColor,
+          font: { size: 9, family: '"JetBrains Mono", monospace' },
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.05)',
+          color: colors.gridColor,
           drawBorder: false,
         },
-        border: {
-          display: false,
-        }
+        border: { display: false },
       },
     },
   };
 
   return (
-    <div className="w-full h-[120px] mt-3">
+    <div className="w-full h-[80px] py-1">
       <Line ref={chartRef} data={chartData} options={options} />
     </div>
   );

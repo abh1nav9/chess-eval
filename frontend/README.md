@@ -16,7 +16,7 @@ flowchart LR
     Stores[Zustand stores]
   end
 
-  subgraph server [Backend localhost:8000]
+  subgraph server [Backend localhost:8888]
     API[REST /api/v1]
     WS[WebSocket /api/v1/ws/analysis/id]
   end
@@ -39,7 +39,7 @@ flowchart LR
 **Integration notes**
 
 - Vite **`/api` proxy** (see `vite.config.ts`) forwards REST calls to the backend so the browser can use same-origin `/api/...` in dev.
-- The WebSocket client currently targets **`ws://localhost:8000`** for analysis progress; align this with your deployment host or tunnel when not developing locally.
+- The WebSocket client currently targets **`ws://localhost:8888`** for analysis progress; align this with your deployment host or tunnel when not developing locally.
 
 ## Tech stack
 

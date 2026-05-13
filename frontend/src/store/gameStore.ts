@@ -3,20 +3,24 @@ import { Chess } from 'chess.js';
 import { INITIAL_FEN } from '@/constants';
 
 interface GameState {
-  // Chess instance
   game: Chess;
-  // Array of FENs from the parsed/analyzed game
+
+  // Original PGN data (immutable after loadGame)
+  pgnFenHistory: string[];
+  pgnMoveHistory: string[];
+
+  // Active navigation history (follows PGN or branch)
   fenHistory: string[];
-  // Array of SAN moves
   moveHistory: string[];
-  // Current move index (-1 = initial position, 0 = after first move, etc.)
+
   currentMoveIndex: number;
-  // Board orientation
   orientation: 'white' | 'black';
-  // Current FEN being displayed
   currentFen: string;
 
-  // Actions
+  // Branch tracking: index of last PGN move before divergence (-1 = no branch)
+  branchStartIndex: number;
+  isExploring: boolean;
+
   loadGame: (pgn: string) => void;
   loadFen: (fen: string) => void;
   goToMove: (index: number) => void;
@@ -25,23 +29,36 @@ interface GameState {
   firstMove: () => void;
   lastMove: () => void;
   flipBoard: () => void;
+  makeMove: (from: string, to: string, promotion?: string) => boolean;
   reset: () => void;
+}
+
+function restorePgn(state: GameState) {
+  return {
+    fenHistory: [...state.pgnFenHistory],
+    moveHistory: [...state.pgnMoveHistory],
+    branchStartIndex: -1,
+    isExploring: false,
+  };
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
   game: new Chess(),
+  pgnFenHistory: [INITIAL_FEN],
+  pgnMoveHistory: [],
   fenHistory: [INITIAL_FEN],
   moveHistory: [],
   currentMoveIndex: -1,
   orientation: 'white',
   currentFen: INITIAL_FEN,
+  branchStartIndex: -1,
+  isExploring: false,
 
   loadGame: (pgn: string) => {
     const game = new Chess();
     try {
       game.loadPgn(pgn);
     } catch {
-      console.error('Failed to load PGN');
       return;
     }
 
@@ -56,10 +73,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     set({
       game,
+      pgnFenHistory: fens,
+      pgnMoveHistory: history,
       fenHistory: fens,
       moveHistory: history,
       currentMoveIndex: -1,
       currentFen: INITIAL_FEN,
+      branchStartIndex: -1,
+      isExploring: false,
     });
   },
 
@@ -67,16 +88,42 @@ export const useGameStore = create<GameState>((set, get) => ({
     const game = new Chess(fen);
     set({
       game,
+      pgnFenHistory: [fen],
+      pgnMoveHistory: [],
       fenHistory: [fen],
       moveHistory: [],
       currentMoveIndex: -1,
       currentFen: fen,
+      branchStartIndex: -1,
+      isExploring: false,
     });
   },
 
   goToMove: (index: number) => {
-    const { fenHistory } = get();
+    const state = get();
+    let { fenHistory, moveHistory, branchStartIndex, isExploring } = state;
     const clampedIndex = Math.max(-1, Math.min(index, fenHistory.length - 2));
+
+    // If navigating to or before branch point, restore PGN
+    if (isExploring && branchStartIndex >= 0 && clampedIndex <= branchStartIndex) {
+      const restored = restorePgn(state);
+      fenHistory = restored.fenHistory;
+      moveHistory = restored.moveHistory;
+      branchStartIndex = restored.branchStartIndex;
+      isExploring = restored.isExploring;
+
+      const reClamp = Math.max(-1, Math.min(clampedIndex, fenHistory.length - 2));
+      set({
+        fenHistory,
+        moveHistory,
+        branchStartIndex,
+        isExploring,
+        currentMoveIndex: reClamp,
+        currentFen: fenHistory[reClamp + 1],
+      });
+      return;
+    }
+
     set({
       currentMoveIndex: clampedIndex,
       currentFen: fenHistory[clampedIndex + 1],
@@ -95,21 +142,47 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   prevMove: () => {
-    const { currentMoveIndex, fenHistory } = get();
-    if (currentMoveIndex >= 0) {
-      const newIndex = currentMoveIndex - 1;
+    const state = get();
+    const { currentMoveIndex } = state;
+    if (currentMoveIndex < 0) return;
+
+    const newIndex = currentMoveIndex - 1;
+
+    // Navigating back to or before branch point → restore PGN
+    if (state.isExploring && state.branchStartIndex >= 0 && newIndex <= state.branchStartIndex) {
+      const restored = restorePgn(state);
+      const reClamp = Math.max(-1, Math.min(newIndex, restored.fenHistory.length - 2));
       set({
-        currentMoveIndex: newIndex,
-        currentFen: fenHistory[newIndex + 1],
+        ...restored,
+        currentMoveIndex: reClamp,
+        currentFen: restored.fenHistory[reClamp + 1],
       });
+      return;
     }
+
+    set({
+      currentMoveIndex: newIndex,
+      currentFen: state.fenHistory[newIndex + 1],
+    });
   },
 
   firstMove: () => {
-    const { fenHistory } = get();
+    const state = get();
+
+    // Going to start always restores PGN if branched
+    if (state.isExploring && state.branchStartIndex >= 0) {
+      const restored = restorePgn(state);
+      set({
+        ...restored,
+        currentMoveIndex: -1,
+        currentFen: restored.fenHistory[0],
+      });
+      return;
+    }
+
     set({
       currentMoveIndex: -1,
-      currentFen: fenHistory[0],
+      currentFen: state.fenHistory[0],
     });
   },
 
@@ -122,19 +195,61 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   flipBoard: () => {
-    set((state) => ({
-      orientation: state.orientation === 'white' ? 'black' : 'white',
-    }));
+    set((s) => ({ orientation: s.orientation === 'white' ? 'black' : 'white' }));
+  },
+
+  makeMove: (from: string, to: string, promotion?: string) => {
+    const state = get();
+    const tempGame = new Chess(state.currentFen);
+
+    try {
+      const result = tempGame.move({ from, to, promotion: promotion || 'q' });
+      if (!result) return false;
+
+      const insertAt = state.currentMoveIndex + 1;
+
+      // Set branch start on first divergence only
+      const branchStart = state.isExploring
+        ? state.branchStartIndex
+        : state.currentMoveIndex;
+
+      const newFenHistory = [
+        ...state.fenHistory.slice(0, insertAt + 1),
+        tempGame.fen(),
+      ];
+      const newMoveHistory = [
+        ...state.moveHistory.slice(0, insertAt),
+        result.san,
+      ];
+
+      set({
+        game: tempGame,
+        fenHistory: newFenHistory,
+        moveHistory: newMoveHistory,
+        currentMoveIndex: insertAt,
+        currentFen: tempGame.fen(),
+        branchStartIndex: branchStart,
+        isExploring: true,
+      });
+
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   reset: () => {
     set({
       game: new Chess(),
+      pgnFenHistory: [INITIAL_FEN],
+      pgnMoveHistory: [],
       fenHistory: [INITIAL_FEN],
       moveHistory: [],
       currentMoveIndex: -1,
       currentFen: INITIAL_FEN,
       orientation: 'white',
+      branchStartIndex: -1,
+      isExploring: false,
     });
   },
 }));

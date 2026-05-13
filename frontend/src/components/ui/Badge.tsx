@@ -22,13 +22,7 @@ export function Badge({ classification, size = 'sm', showLabel = false }: BadgeP
         }}
         title={config.label}
       >
-        {classification === 'brilliant' ? '!!' :
-         classification === 'best' ? '★' :
-         classification === 'blunder' ? '??' :
-         classification === 'mistake' ? '?' :
-         classification === 'inaccuracy' ? '?!' :
-         classification === 'excellent' ? '✓' :
-         classification === 'good' ? '•' : '📖'}
+        {config.symbol}
       </span>
       {showLabel && (
         <span className="text-xs font-medium" style={{ color: config.color }}>

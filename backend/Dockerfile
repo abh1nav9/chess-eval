@@ -18,6 +18,6 @@ COPY . .
 # Set environment variable for Stockfish path
 ENV STOCKFISH_PATH=/usr/games/stockfish
 
-EXPOSE 8000
+EXPOSE 8888
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8888"]

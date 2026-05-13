@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAnalysisStore } from '@/store/analysisStore';
+import { useGameStore } from '@/store/gameStore';
 import type { PGNAnalysisResult } from '@/types';
 
 const WS_BASE = import.meta.env.VITE_WS_URL ??
@@ -10,6 +11,7 @@ const INITIAL_RECONNECT_DELAY = 1_000;
 
 export function useAnalysisWebSocket(analysisId: string | null) {
   const { setProgress, setPGNResult, setError } = useAnalysisStore();
+  const { loadGame } = useGameStore();
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectDelay = useRef(INITIAL_RECONNECT_DELAY);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,7 +70,11 @@ export function useAnalysisWebSocket(analysisId: string | null) {
           });
         } else if (data.type === 'completed') {
           doneRef.current = true;
-          setPGNResult(data.result as PGNAnalysisResult);
+          const result = data.result as PGNAnalysisResult;
+          setPGNResult(result);
+          if (result.pgn) {
+            loadGame(result.pgn);
+          }
           socket.close();
         } else if (data.type === 'failed') {
           doneRef.current = true;
@@ -93,7 +99,7 @@ export function useAnalysisWebSocket(analysisId: string | null) {
     socket.onerror = () => {
       // onerror is always followed by onclose — reconnect handled there
     };
-  }, [analysisId, setProgress, setPGNResult, setError, cleanup]);
+  }, [analysisId, setProgress, setPGNResult, setError, loadGame, cleanup]);
 
   useEffect(() => {
     doneRef.current = false;

@@ -22,7 +22,7 @@ from app.analysis.pipeline_helpers import (
 )
 from app.db.repositories import PositionCacheRepository
 from app.engine.stockfish import StockfishEngine
-from app.engine.types import EngineConfig, EngineResult, EngineScore, ScoreType
+from app.engine.types import EngineConfig, EngineResult
 from app.models.analysis import (
     AnalysisDocument,
     AnalysisSummaryDocument,
@@ -150,7 +150,11 @@ class AnalysisPipeline:
         depth: int,
         analysis_id: str,
     ) -> List[MoveDocument]:
-        """Evaluate positions using multi-PV, dynamic depth, cache, and book detection."""
+        """Evaluate each position once with single PV + movetime cap.
+
+        Optimization: the 'after' eval of move N is reused as the 'before' eval of move N+1
+        since they're the same position. This halves the number of engine calls.
+        """
         if not moves:
             return []
 
@@ -160,14 +164,15 @@ class AnalysisPipeline:
         move_documents: List[MoveDocument] = []
         prev_eval = 0.0
         prev_mate: Optional[int] = None
+        carried_result: Optional[EngineResult] = None
 
-        # If user specified a custom depth, use it flat (no tiered logic)
         use_tiered_depth = (depth == GAME_ANALYSIS_DEPTH)
 
         for i, parsed_move in enumerate(moves):
             if i <= last_book_ply:
                 move_documents.append(build_book_move_doc(parsed_move))
                 await self._broadcast_progress(analysis_id, i, len(moves), move_documents[-1])
+                carried_result = None
                 continue
 
             if use_tiered_depth:
@@ -175,20 +180,25 @@ class AnalysisPipeline:
             else:
                 cur_depth = depth
 
-            # Multi-PV for position BEFORE the move
-            before_result = await self._get_eval_with_cache(
-                engine, parsed_move.fen_before, cur_depth, multi_pv=True
-            )
+            # "Before" eval: reuse carried result from previous "after" when available
+            if carried_result is not None:
+                before_result = carried_result
+            else:
+                before_result = await self._get_eval_with_cache(
+                    engine, parsed_move.fen_before, cur_depth
+                )
+
             best_move_eval = before_result.score.to_pawn_value()
             best_move_uci = before_result.best_move
             eval_before = best_move_eval
 
-            # Single PV for position AFTER the move
+            # "After" eval: single call per move (will be carried forward as next "before")
             after_result = await self._get_eval_with_cache(
-                engine, parsed_move.fen_after, cur_depth, multi_pv=False
+                engine, parsed_move.fen_after, cur_depth
             )
             eval_after = after_result.score.to_pawn_value()
             mate_after = after_result.mate_in
+            carried_result = after_result
 
             # Classification
             board_before = chess.Board(parsed_move.fen_before)
@@ -315,24 +325,18 @@ class AnalysisPipeline:
         engine: StockfishEngine,
         fen: str,
         depth: int,
-        multi_pv: bool = False,
     ) -> EngineResult:
-        """Check position cache before calling engine. Cache results after."""
+        """Check position cache, then call engine with movetime cap.
+
+        Uses 2s per position — reliably reaches depth 17-18, sufficient for classification.
+        """
         fen_hash = fen_to_hash(fen)
 
         cached = await PositionCacheRepository.get_cached(fen_hash, min_depth=depth)
         if cached:
             return cached_to_engine_result(cached)
 
-        if multi_pv:
-            results = await engine.analyze_position_multi_pv(
-                fen, num_lines=3, depth=depth
-            )
-            result = results[0] if results else EngineResult(
-                score=EngineScore(ScoreType.CENTIPAWN, 0), best_move=""
-            )
-        else:
-            result = await engine.analyze_position(fen, depth=depth)
+        result = await engine.analyze_position(fen, depth=depth, movetime=2000)
 
         await self._try_cache_result(fen, fen_hash, result)
         return result

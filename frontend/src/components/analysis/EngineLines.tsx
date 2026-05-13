@@ -6,7 +6,6 @@ import { TrendingUp, TrendingDown, Minus, Lightbulb } from 'lucide-react';
 export function EngineLines() {
   const { pgnResult, fenResult, selectedMoveIndex, mode } = useAnalysisStore();
 
-  // FEN mode — show top engine lines
   if (mode === 'fen' && fenResult) {
     return (
       <div className="space-y-2">
@@ -46,7 +45,6 @@ export function EngineLines() {
     );
   }
 
-  // PGN mode — show current move detail
   if (!pgnResult || selectedMoveIndex < 0 || selectedMoveIndex >= pgnResult.moves.length) {
     return (
       <div className="text-sm text-[var(--color-text-muted)] text-center py-8">
@@ -59,13 +57,15 @@ export function EngineLines() {
   const config = CLASSIFICATION_CONFIG[move.classification];
   const evalDelta = move.eval_after - move.eval_before;
 
+  const isGoodMove = ['brilliant', 'great', 'best', 'excellent'].includes(move.classification);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Move header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge classification={move.classification} size="md" showLabel />
-          <span className="text-lg font-bold font-mono text-[var(--color-text-primary)]">
+          <span className="text-base font-bold font-mono text-[var(--color-text-primary)]">
             {move.move_number}{move.color === 'white' ? '.' : '...'} {move.move}
           </span>
         </div>
@@ -126,9 +126,9 @@ export function EngineLines() {
         </div>
       </div>
 
-      {/* Best move */}
-      {move.best_move && move.classification !== 'best' && move.classification !== 'brilliant' && (
-        <div className="p-2.5 rounded-[var(--radius-md)] bg-[var(--color-best)]10 border border-[var(--color-best)]30">
+      {/* Best move (only show when player didn't play the best) */}
+      {move.best_move && !isGoodMove && (
+        <div className="p-2.5 rounded-[var(--radius-md)] bg-[var(--color-best)]/10 border border-[var(--color-best)]/30">
           <div className="flex items-center gap-1.5 mb-1">
             <Lightbulb size={12} className="text-[var(--color-best)]" />
             <span className="text-[10px] text-[var(--color-best)] uppercase font-medium">Best Move</span>

@@ -22,7 +22,7 @@ export function AnalysisSummary() {
         <span className="text-xs text-[var(--color-text-muted)]">{metadata.result}</span>
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-[var(--color-text-primary)]">{metadata.black}</span>
-          <div className="w-3 h-3 rounded-sm bg-[#333] border border-[var(--color-border)]" />
+          <div className="w-3 h-3 rounded-sm bg-[var(--color-black-square)] border border-[var(--color-border)]" />
         </div>
       </div>
 
@@ -67,7 +67,7 @@ export function AnalysisSummary() {
           Move Quality
         </h4>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          {(['brilliant', 'best', 'excellent', 'good', 'inaccuracy', 'mistake', 'blunder'] as MoveClassification[]).map(
+          {(['brilliant', 'great', 'best', 'excellent', 'good', 'inaccuracy', 'mistake', 'miss', 'blunder'] as MoveClassification[]).map(
             (cls) => {
               const config = CLASSIFICATION_CONFIG[cls];
               const wCount = summary.white_classifications[cls] || 0;

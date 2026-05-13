@@ -1,24 +1,38 @@
 import { create } from 'zustand';
-import type { PGNAnalysisResult, FENAnalysisResult, MoveEvaluation, AnalysisProgressState } from '@/types';
+import type {
+  PGNAnalysisResult,
+  FENAnalysisResult,
+  MoveEvaluation,
+  MoveClassification,
+  AnalysisProgressState,
+} from '@/types';
+
+/** Lightweight eval for a live (exploration) move. */
+export interface ExplorationMove {
+  moveIndex: number;
+  san: string;
+  moveUci: string;
+  evalBefore: number;
+  evalAfter: number;
+  classification: MoveClassification;
+  bestMoveUci: string | null;
+  toSquare: string;
+  fromSquare: string;
+}
 
 interface AnalysisState {
-  // PGN analysis data
   pgnResult: PGNAnalysisResult | null;
-  // FEN analysis data
   fenResult: FENAnalysisResult | null;
-  // Loading states
   isAnalyzing: boolean;
   analysisError: string | null;
-  // Current mode
   mode: 'pgn' | 'fen' | null;
-  // Selected move for detail view
   selectedMoveIndex: number;
-  // Tracking async analysis
   pendingAnalysisId: string | null;
-  // Progress status
   analysisProgress: AnalysisProgressState | null;
 
-  // Actions
+  // Live exploration move evaluations (keyed by move index)
+  explorationMoves: ExplorationMove[];
+
   setPGNResult: (result: PGNAnalysisResult) => void;
   setFENResult: (result: FENAnalysisResult) => void;
   setAnalyzing: (loading: boolean) => void;
@@ -28,6 +42,8 @@ interface AnalysisState {
   setMode: (mode: 'pgn' | 'fen') => void;
   setSelectedMove: (index: number) => void;
   getCurrentMoveEval: () => MoveEvaluation | null;
+  addExplorationMove: (move: ExplorationMove) => void;
+  clearExplorationMoves: () => void;
   reset: () => void;
 }
 
@@ -40,6 +56,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   selectedMoveIndex: -1,
   pendingAnalysisId: null,
   analysisProgress: null,
+  explorationMoves: [],
 
   setPGNResult: (result) =>
     set({
@@ -50,12 +67,15 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       analysisProgress: null,
       pendingAnalysisId: null,
       selectedMoveIndex: -1,
+      explorationMoves: [],
     }),
-  setFENResult: (result) => set({ fenResult: result, analysisError: null, mode: 'fen', isAnalyzing: false }),
+  setFENResult: (result) =>
+    set({ fenResult: result, analysisError: null, mode: 'fen', isAnalyzing: false }),
   setAnalyzing: (loading) => set({ isAnalyzing: loading }),
   setPendingAnalysisId: (id) => set({ pendingAnalysisId: id, isAnalyzing: true }),
   setProgress: (progress) => set({ analysisProgress: progress }),
-  setError: (error) => set({ analysisError: error, isAnalyzing: false, analysisProgress: null, pendingAnalysisId: null }),
+  setError: (error) =>
+    set({ analysisError: error, isAnalyzing: false, analysisProgress: null, pendingAnalysisId: null }),
   setMode: (mode) => set({ mode }),
   setSelectedMove: (index) => set({ selectedMoveIndex: index }),
 
@@ -65,14 +85,26 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     return pgnResult.moves[selectedMoveIndex] || null;
   },
 
-  reset: () => set({
-    pgnResult: null,
-    fenResult: null,
-    isAnalyzing: false,
-    analysisError: null,
-    mode: null,
-    selectedMoveIndex: -1,
-    analysisProgress: null,
-    pendingAnalysisId: null,
-  }),
+  addExplorationMove: (move) =>
+    set((s) => ({
+      explorationMoves: [
+        ...s.explorationMoves.filter((m) => m.moveIndex !== move.moveIndex),
+        move,
+      ],
+    })),
+
+  clearExplorationMoves: () => set({ explorationMoves: [] }),
+
+  reset: () =>
+    set({
+      pgnResult: null,
+      fenResult: null,
+      isAnalyzing: false,
+      analysisError: null,
+      mode: null,
+      selectedMoveIndex: -1,
+      analysisProgress: null,
+      pendingAnalysisId: null,
+      explorationMoves: [],
+    }),
 }));
