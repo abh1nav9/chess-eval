@@ -1,7 +1,6 @@
 # ChessEval
 
-ChessEval is a production-grade, open-source chess analysis platform. 
-It features a high-performance Python/FastAPI backend for asynchronous Stockfish evaluation and a sleek, minimalist React/Vite frontend inspired by Linear and Vercel design systems.
+ChessEval is a production-grade, open-source chess analysis platform. It combines a Python/FastAPI backend (async Stockfish jobs, MongoDB, WebSocket progress) with a React/Vite frontend: interactive board with eval bar, move list, engine lines, eval chart, optional move sounds, and board flip with player labels aligned to each side.
 
 ## Project Structure
 

@@ -69,6 +69,7 @@ flowchart TB
 **Engine behavior**
 
 - **`StockfishEngine`** runs the binary over UCI (`asyncio` subprocess). Per-position analysis uses **`go depth N`** when **`STOCKFISH_MOVETIME=0`** (default), so searches are depth-limited only, not cut off by a movetime cap. If `STOCKFISH_MOVETIME > 0`, the command adds `movetime` as an additional ceiling.
+- **White POV**: raw UCI scores are from the side to move. **`WhitePovEngineNormalizer`** (`app/engine/white_pov.py`) flips centipawn and mate scores when Black is to move so API consumers and **`MoveClassifier`** always see evaluations from White’s perspective (positive favors White). Cached positions may carry **`eval_white_pov`**; older cache rows are normalized on read when that flag is absent.
 - **`AnalysisPipeline`** replays the game, evaluates before/after positions, derives centipawn loss, and assigns classifications (brilliant / best / blunder / book / etc.).
 
 ## Prerequisites
@@ -142,7 +143,8 @@ uvicorn app.main:app --reload --port 8888
 | `app/services/analysis_service.py` | Orchestrates PGN jobs, FEN analysis, DB updates, WS broadcasts |
 | `app/analysis/pipeline.py` | Move-by-move engine loop and summaries |
 | `app/analysis/pgn_parser.py` / `classifier.py` | Parse games and label moves |
-| `app/engine/stockfish.py` | UCI session and `go` limits |
+| `app/engine/stockfish.py` | UCI session and `go` limits; returns White-POV-normalized results |
+| `app/engine/white_pov.py` | Normalize engine evals to White’s perspective |
 | `app/engine/stockfish_probe.py` | Short UCI handshake for version string |
 | `app/core/config.py` | `pydantic-settings` from `.env` |
 | `app/core/websocket.py` | Room-per-`analysis_id` broadcast helper |

@@ -32,14 +32,16 @@ flowchart LR
 **What the app does today**
 
 1. **Setup** (`SetupView`): user pastes **PGN** or **FEN**. PGN submit kicks off `POST /api/v1/analyze/pgn`, stores `analysis_id`, loads the PGN into **`gameStore`** for move replay, and opens a **WebSocket** to receive `progress` / `completed` / `failed`. FEN submit uses `POST /api/v1/analyze/fen` and shows a single-position result.
-2. **Analysis page**: chessboard (`react-chessboard` + `chess.js` FEN history), **eval bar** tied to the selected move’s engine eval, **board controls** (first/prev/next/last + keyboard) synced with **`selectedMoveIndex`**, sidebar tabs (**Moves** list with classifications, **Engine** lines for the current position when applicable, **Summary**), and **eval graph** (Chart.js) for the whole game.
-3. **Progress overlay**: while a PGN job is running, a modal shows engine progress; it clears when the WebSocket delivers `completed` with the full result.
-4. **Styling**: Tailwind CSS v4 with design tokens in `src/index.css` (dark “Linear-style” theme).
+2. **Analysis page**: chessboard (`react-chessboard` + `chess.js` FEN history), **eval bar** tied to the selected move’s engine eval, **board controls** (first/prev/next/last + flip + keyboard) synced with **`selectedMoveIndex`**, sidebar tabs (**Moves** list with classifications, **Engine** lines for the current position when applicable, **Summary**), and **eval graph** (Chart.js) for the whole game. **Flip board** swaps which player row sits above or below the board so names match the side you are sitting on.
+3. **Live exploration**: from the analyzed position you can play alternate moves on the board; the client requests a FEN analysis and shows a live classification badge (same store flow as PGN line selection).
+4. **Sounds**: MP3s under `public/sounds/` are driven by **`GameSoundCoordinator`** (`src/audio/`): game start or timeout (from PGN `[Termination]` when present) when analysis is ready; move outcomes (piece move, capture, castle, check, mate, stalemate) on user moves and on line navigation (forward and single-step back; jump-to-start uses a generic move clip).
+5. **Progress overlay**: while a PGN job is running, a modal shows engine progress; it clears when the WebSocket delivers `completed` with the full result.
+6. **Styling**: Tailwind CSS v4 with design tokens in `src/index.css` (dark “Linear-style” theme).
 
 **Integration notes**
 
 - Vite **`/api` proxy** (see `vite.config.ts`) forwards REST calls to the backend so the browser can use same-origin `/api/...` in dev.
-- The WebSocket client currently targets **`ws://localhost:8888`** for analysis progress; align this with your deployment host or tunnel when not developing locally.
+- The WebSocket URL defaults to **`VITE_WS_URL`** if set; otherwise **`ws(s)://` + `window.location.host`**, so in dev the Vite **`/api` proxy** (see `vite.config.ts`, `ws: true`) can forward **`/api/v1/ws/analysis/...`** to the backend. Set **`VITE_WS_URL`** (e.g. `ws://localhost:8888`) if your API host differs from the SPA host.
 
 ## Tech stack
 
@@ -77,13 +79,16 @@ Output: `dist/`. Preview locally: `npm run preview`.
 | `src/app/` | `App.tsx`, router, providers |
 | `src/pages/` | Route-level pages (e.g. `AnalysisPage`) |
 | `src/components/layout/` | Shell, header, page wrapper |
-| `src/components/board/` | Board, eval bar, controls |
+| `src/components/board/` | Board, eval bar, controls, player info |
 | `src/components/analysis/` | Setup, sidebar, move list, progress overlay |
 | `src/components/charts/` | Eval graph |
+| `src/audio/` | Sound path map + `GameSoundCoordinator` |
 | `src/store/` | `analysisStore`, `gameStore`, `uiStore` |
 | `src/hooks/` | PGN/FEN mutations, WebSocket subscription |
 | `src/services/` | Axios API client |
+| `src/utils/` | Helpers (e.g. live move classification, PGN termination parse, replay helpers for sounds) |
 | `src/types/` | Shared TS types aligned with backend payloads |
+| `public/sounds/` | Board / session MP3 assets |
 
 ## Lint
 
