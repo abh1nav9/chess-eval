@@ -21,8 +21,8 @@ export function SetupView() {
           Chess Game Analysis
         </h1>
         <p className="text-[var(--color-text-muted)] text-lg max-w-md mx-auto">
-          Paste a PGN or pull recent games from a public Chess.com profile for engine insights and move
-          classifications.
+          Paste a PGN, upload a PGN file, or pull recent games from a public Chess.com or Lichess profile for engine insights and move
+          classifications. Paste a FEN string for a position to analyze.
         </p>
       </motion.div>
 
