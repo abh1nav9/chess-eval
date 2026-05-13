@@ -60,6 +60,7 @@ flowchart TB
 
 | Path | Role |
 |------|------|
+| `GET /api/v1/chesscom/player/{username}/recent-games` | Query `limit` (default 10, max 31): proxy to Chess.com Published Data API for recent standard games with PGN (newest first). Requires outbound HTTPS from the server. |
 | `POST /api/v1/analyze/pgn` | Validates PGN, creates a `processing` document in MongoDB, starts a **background** full-game analysis, returns `analysis_id` + initial payload. Engine depth comes from **`STOCKFISH_DEPTH`** in the environment (request `depth` / `movetime` fields are deprecated and ignored). |
 | `WebSocket /api/v1/ws/analysis/{analysis_id}` | Client subscribes; server pushes `progress` (move index, percentage, optional `last_move`), then `completed` with the full analysis or `failed`. Payloads are JSON-serialized with `jsonable_encoder` so datetimes in results do not break the socket. |
 | `POST /api/v1/analyze/fen` | Synchronous single-position analysis (eval, best move, multi-PV lines); may write **position cache** in MongoDB. Same server-controlled depth. |
@@ -77,6 +78,7 @@ flowchart TB
 - **Python 3.10+**
 - **MongoDB** (local or Atlas)
 - **Stockfish** binary ([stockfishchess.org](https://stockfishchess.org/download/)) — e.g. Stockfish 18
+- **Outbound HTTPS** if you use **Chess.com profile import** (`GET /api/v1/chesscom/...`) so the server can reach `api.chess.com`
 
 ## Environment setup
 
@@ -139,8 +141,10 @@ uvicorn app.main:app --reload --port 8888
 | Path | Purpose |
 |------|---------|
 | `app/main.py` | FastAPI factory, CORS, lifespan (Mongo connect), exception handlers |
-| `app/api/v1/` | Routers: `analysis`, `health`, `websocket` |
+| `app/api/v1/` | Routers: `analysis`, `chesscom`, `health`, `websocket` |
 | `app/services/analysis_service.py` | Orchestrates PGN jobs, FEN analysis, DB updates, WS broadcasts |
+| `app/api/v1/chesscom.py` | Chess.com archive proxy (recent games + PGN) |
+| `app/services/chess_com_archive_client.py` | httpx client for `api.chess.com` |
 | `app/analysis/pipeline.py` | Move-by-move engine loop and summaries |
 | `app/analysis/pgn_parser.py` / `classifier.py` | Parse games and label moves |
 | `app/engine/stockfish.py` | UCI session and `go` limits; returns White-POV-normalized results |
@@ -149,7 +153,7 @@ uvicorn app.main:app --reload --port 8888
 | `app/core/config.py` | `pydantic-settings` from `.env` |
 | `app/core/websocket.py` | Room-per-`analysis_id` broadcast helper |
 | `app/db/` | Motor client + repositories |
-| `app/schemas/` | Pydantic request/response models |
+| `app/schemas/` | Pydantic request/response models (including `chesscom` game list) |
 | `app/models/` | Domain / Mongo document shapes |
 
 Docker: `Dockerfile` installs the distro `stockfish` package and sets `STOCKFISH_PATH` for container runs.

@@ -31,7 +31,7 @@ flowchart LR
 
 **What the app does today**
 
-1. **Setup** (`SetupView`): user pastes **PGN** or **FEN**. PGN submit kicks off `POST /api/v1/analyze/pgn`, stores `analysis_id`, loads the PGN into **`gameStore`** for move replay, and opens a **WebSocket** to receive `progress` / `completed` / `failed`. FEN submit uses `POST /api/v1/analyze/fen` and shows a single-position result.
+1. **Setup** (`SetupView`): user pastes **PGN** or opens **Chess.com**, enters a public username; the app calls `GET /api/v1/chesscom/player/{user}/recent-games` (backend proxy—Chess.com blocks browser CORS), lists recent games, and **Analyze** submits the same `POST /api/v1/analyze/pgn` + WebSocket flow as a pasted PGN. PGN-only submit stores `analysis_id`, loads the PGN into **`gameStore`**, and opens a **WebSocket** for `progress` / `completed` / `failed`. FEN submit uses `POST /api/v1/analyze/fen` and shows a single-position result (when enabled in the UI).
 2. **Analysis page**: chessboard (`react-chessboard` + `chess.js` FEN history), **eval bar** tied to the selected move’s engine eval, **board controls** (first/prev/next/last + flip + keyboard) synced with **`selectedMoveIndex`**, sidebar tabs (**Moves** list with classifications, **Engine** lines for the current position when applicable, **Summary**), and **eval graph** (Chart.js) for the whole game. **Flip board** swaps which player row sits above or below the board so names match the side you are sitting on.
 3. **Live exploration**: from the analyzed position you can play alternate moves on the board; the client requests a FEN analysis and shows a live classification badge (same store flow as PGN line selection).
 4. **Sounds**: MP3s under `public/sounds/` are driven by **`GameSoundCoordinator`** (`src/audio/`): game start or timeout (from PGN `[Termination]` when present) when analysis is ready; move outcomes (piece move, capture, castle, check, mate, stalemate) on user moves and on line navigation (forward and single-step back; jump-to-start uses a generic move clip).
@@ -80,12 +80,12 @@ Output: `dist/`. Preview locally: `npm run preview`.
 | `src/pages/` | Route-level pages (e.g. `AnalysisPage`) |
 | `src/components/layout/` | Shell, header, page wrapper |
 | `src/components/board/` | Board, eval bar, controls, player info |
-| `src/components/analysis/` | Setup, sidebar, move list, progress overlay |
+| `src/components/analysis/` | Setup, sidebar, move list, Chess.com import, progress overlay |
 | `src/components/charts/` | Eval graph |
 | `src/audio/` | Sound path map + `GameSoundCoordinator` |
 | `src/store/` | `analysisStore`, `gameStore`, `uiStore` |
 | `src/hooks/` | PGN/FEN mutations, WebSocket subscription |
-| `src/services/` | Axios API client |
+| `src/services/` | Axios API client (`analysisService`, `chessComService`) |
 | `src/utils/` | Helpers (e.g. live move classification, PGN termination parse, replay helpers for sounds) |
 | `src/types/` | Shared TS types aligned with backend payloads |
 | `public/sounds/` | Board / session MP3 assets |

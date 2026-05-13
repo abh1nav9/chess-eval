@@ -30,16 +30,16 @@ ChartJS.register(
 function getChartColors(theme: 'light' | 'dark') {
   const isDark = theme === 'dark';
   return {
-    line: isDark ? '#a1a1aa' : '#71717a',
-    pointHoverBg: isDark ? '#ffffff' : '#1a1a1a',
-    pointHoverBorder: isDark ? '#000000' : '#ffffff',
-    tooltipBg: isDark ? '#111111' : '#ffffff',
-    tooltipTitle: isDark ? '#ededed' : '#1a1a1a',
-    tooltipBody: isDark ? '#a1a1aa' : '#52525b',
-    tooltipBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-    annotationLine: isDark ? '#ffffff' : '#1a1a1a',
-    tickColor: isDark ? '#71717a' : '#a1a1aa',
-    gridColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+    line: isDark ? '#8a857c' : '#6d6860',
+    pointHoverBg: isDark ? '#e8e4dc' : '#2c2a26',
+    pointHoverBorder: isDark ? '#262522' : '#f3f1ed',
+    tooltipBg: isDark ? '#1e1d1a' : '#fdfcfa',
+    tooltipTitle: isDark ? '#e8e4dc' : '#2c2a26',
+    tooltipBody: isDark ? '#a39e94' : '#5c5852',
+    tooltipBorder: isDark ? 'rgba(245, 240, 232, 0.08)' : 'rgba(44, 42, 38, 0.08)',
+    annotationLine: isDark ? '#c9c2b5' : '#3d3a35',
+    tickColor: isDark ? '#7a756c' : '#8a857c',
+    gridColor: isDark ? 'rgba(245, 240, 232, 0.06)' : 'rgba(44, 42, 38, 0.06)',
   };
 }
 
@@ -85,10 +85,10 @@ export function EvalGraph() {
           if (!chartArea) return null;
 
           const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-          gradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
-          gradient.addColorStop(0.5, 'rgba(16, 185, 129, 0.02)');
-          gradient.addColorStop(0.5, 'rgba(239, 68, 68, 0.02)');
-          gradient.addColorStop(1, 'rgba(239, 68, 68, 0.2)');
+          gradient.addColorStop(0, 'rgba(5, 150, 105, 0.12)');
+          gradient.addColorStop(0.5, 'rgba(5, 150, 105, 0.02)');
+          gradient.addColorStop(0.5, 'rgba(220, 38, 38, 0.02)');
+          gradient.addColorStop(1, 'rgba(220, 38, 38, 0.12)');
 
           return gradient;
         },

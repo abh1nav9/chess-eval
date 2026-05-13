@@ -1,6 +1,5 @@
 import { useUIStore } from '@/store/uiStore';
 import { useAnalysisStore } from '@/store/analysisStore';
-import { useGameStore } from '@/store/gameStore';
 import { Tabs } from '@/components/ui/Tabs';
 import { MoveList } from '@/components/analysis/MoveList';
 import { EngineLines } from '@/components/analysis/EngineLines';
@@ -8,12 +7,11 @@ import { AnalysisSummary } from '@/components/analysis/AnalysisSummary';
 import { TopEngineLines } from '@/components/analysis/TopEngineLines';
 import { EvalGraph } from '@/components/charts/EvalGraph';
 import { Card } from '@/components/ui/Card';
-import { List, Cpu, PieChart, Settings, Plus, Save, Star } from 'lucide-react';
+import { List, Cpu, PieChart } from 'lucide-react';
 
 export function AnalysisSidebar() {
   const { activeTab, setActiveTab } = useUIStore();
-  const { pgnResult, fenResult, reset: resetAnalysis } = useAnalysisStore();
-  const { reset: resetGame } = useGameStore();
+  const { pgnResult, fenResult } = useAnalysisStore();
 
   const hasAnalysis = pgnResult || fenResult;
 
@@ -24,11 +22,6 @@ export function AnalysisSidebar() {
   ];
 
   if (!hasAnalysis) return null;
-
-  const handleNewAnalysis = () => {
-    resetAnalysis();
-    resetGame();
-  };
 
   return (
     <div className="w-[380px] shrink-0 flex flex-col h-[calc(100vh-112px)]">
@@ -75,10 +68,18 @@ export function AnalysisSidebar() {
         </div>
 
         {/* Tabbed content */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-2">
+        <div className="flex flex-1 flex-col min-h-0 overflow-hidden px-3 pb-2">
           {activeTab === 'moves' && <MoveList />}
-          {activeTab === 'engine' && <EngineLines />}
-          {activeTab === 'summary' && <AnalysisSummary />}
+          {activeTab === 'engine' && (
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <EngineLines />
+            </div>
+          )}
+          {activeTab === 'summary' && (
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <AnalysisSummary />
+            </div>
+          )}
         </div>
 
         {/* Eval graph strip */}
@@ -87,35 +88,6 @@ export function AnalysisSidebar() {
             <EvalGraph />
           </div>
         )}
-
-        {/* Bottom action bar */}
-        {/* <div className="flex items-center justify-center gap-4 px-3 py-2 border-t border-[var(--color-border)]">
-          <button
-            onClick={handleNewAnalysis}
-            className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
-          >
-            <Plus size={13} />
-            <span>New</span>
-          </button>
-          <button
-            className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
-          >
-            <Save size={13} />
-            <span>Save</span>
-          </button>
-          <button
-            className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
-          >
-            <Star size={13} />
-            <span>Review</span>
-          </button>
-          <button
-            className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
-          >
-            <Settings size={13} />
-            <span>...</span>
-          </button>
-        </div> */}
       </Card>
     </div>
   );

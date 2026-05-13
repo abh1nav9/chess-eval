@@ -25,52 +25,56 @@
   --color-white-square: #ebecd0;
   --color-black-square: #739552;
 
-  /* Semantic */
-  --color-eval-positive: #10b981;
-  --color-eval-negative: #ef4444;
-  --color-eval-neutral: #71717a;
+  /* Semantic (slightly muted for calmer UI) */
+  --color-eval-positive: #059669;
+  --color-eval-negative: #dc2626;
+  --color-eval-neutral: #737373;
 }
 
-/* ── Light Theme (default) ─────────────────────────────── */
+/* ── Light Theme (default) — warm neutrals, no pure white/black ─ */
 :root {
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f7f7f8;
-  --color-bg-card: #ffffff;
-  --color-bg-hover: #f0f0f2;
-  --color-bg-input: #f5f5f7;
+  --color-bg-primary: #f7f6f4;
+  --color-bg-secondary: #efede9;
+  --color-bg-card: #fdfcfa;
+  --color-bg-hover: #e8e6e1;
+  --color-bg-input: #f3f1ed;
 
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-border-subtle: rgba(0, 0, 0, 0.05);
-  --color-border-focus: rgba(0, 0, 0, 0.3);
+  --color-border: rgba(45, 42, 38, 0.09);
+  --color-border-subtle: rgba(45, 42, 38, 0.05);
+  --color-border-focus: rgba(45, 42, 38, 0.22);
 
-  --color-text-primary: #1a1a1a;
-  --color-text-secondary: #52525b;
-  --color-text-muted: #a1a1aa;
+  --color-text-primary: #2c2a26;
+  --color-text-secondary: #5c5852;
+  --color-text-muted: #8a857c;
 
-  --color-accent: #1a1a1a;
-  --color-accent-hover: #333333;
-  --color-accent-fg: #ffffff;
+  --color-accent: #3d3a35;
+  --color-accent-hover: #524e47;
+  --color-accent-fg: #faf8f5;
+
+  --color-overlay-scrim: rgba(44, 40, 34, 0.36);
 }
 
-/* ── Dark Theme ────────────────────────────────────────── */
+/* ── Dark Theme — lifted surfaces, softer text vs background ─ */
 [data-theme="dark"] {
-  --color-bg-primary: #000000;
-  --color-bg-secondary: #080808;
-  --color-bg-card: #0c0c0c;
-  --color-bg-hover: #141414;
-  --color-bg-input: #0a0a0a;
+  --color-bg-primary: #141312;
+  --color-bg-secondary: #1a1917;
+  --color-bg-card: #1e1d1a;
+  --color-bg-hover: #262522;
+  --color-bg-input: #1c1b18;
 
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-subtle: rgba(255, 255, 255, 0.04);
-  --color-border-focus: rgba(255, 255, 255, 0.2);
+  --color-border: rgba(245, 240, 232, 0.07);
+  --color-border-subtle: rgba(245, 240, 232, 0.04);
+  --color-border-focus: rgba(245, 240, 232, 0.16);
 
-  --color-text-primary: #f4f4f5;
-  --color-text-secondary: #a1a1aa;
-  --color-text-muted: #71717a;
+  --color-text-primary: #e8e4dc;
+  --color-text-secondary: #a39e94;
+  --color-text-muted: #7a756c;
 
-  --color-accent: #ffffff;
-  --color-accent-hover: #f4f4f5;
-  --color-accent-fg: #000000;
+  --color-accent: #c9c2b5;
+  --color-accent-hover: #d8d2c8;
+  --color-accent-fg: #1a1816;
+
+  --color-overlay-scrim: rgba(10, 9, 8, 0.55);
 }
 
 body {
@@ -91,7 +95,7 @@ h1, h2, h3, h4, h5, h6 {
 .linear-card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(44, 42, 38, 0.04);
 }
 
 .linear-card:hover {
@@ -99,28 +103,36 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="dark"] .linear-card {
-  background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.025) 0%, rgba(255, 255, 255, 0.01) 100%);
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
-    0 2px 8px rgba(0, 0, 0, 0.4);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
+    0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
 [data-theme="dark"] .linear-card:hover {
-  background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.015) 100%);
+  border-color: rgba(245, 240, 232, 0.1);
 }
 
 /* ── Button Primary ────────────────────────────────────── */
 .linear-button-primary {
   background: var(--color-accent);
   color: var(--color-accent-fg);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .linear-button-primary:hover {
   background: var(--color-accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .linear-button-primary {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .linear-button-primary:hover {
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
 }
 
 /* ── Glow Text ─────────────────────────────────────────── */
@@ -133,14 +145,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="dark"] .linear-glow-text {
-  background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+  background: linear-gradient(180deg, #ece8e0 0%, rgba(236, 232, 224, 0.75) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 [data-theme="dark"] .linear-glow-text-subtle {
-  background: linear-gradient(180deg, #a1a1aa 0%, rgba(161,161,170,0.5) 100%);
+  background: linear-gradient(180deg, #a39e94 0%, rgba(163, 158, 148, 0.55) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -149,11 +161,11 @@ h1, h2, h3, h4, h5, h6 {
 /* ── Scrollbar ─────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+::-webkit-scrollbar-thumb { background: rgba(44, 42, 38, 0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(44, 42, 38, 0.2); }
 
-[data-theme="dark"]::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
-[data-theme="dark"]::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+[data-theme="dark"]::-webkit-scrollbar-thumb { background: rgba(245, 240, 232, 0.08); }
+[data-theme="dark"]::-webkit-scrollbar-thumb:hover { background: rgba(245, 240, 232, 0.14); }
 
 /* ── Focus ─────────────────────────────────────────────── */
 :focus-visible {

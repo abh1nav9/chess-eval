@@ -69,7 +69,8 @@ export function AnalysisProgressOverlay({ visible, progress }: AnalysisProgressO
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-md"
+          style={{ backgroundColor: 'var(--color-overlay-scrim)' }}
         >
           <motion.div
             initial={{ scale: 0.96, opacity: 0 }}

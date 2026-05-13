@@ -1,15 +1,19 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { Info } from 'lucide-react';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
 import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 import { Badge } from '@/components/ui/Badge';
+import { ClassificationLegendModal } from '@/components/analysis/ClassificationLegendModal';
+import { CLASSIFICATION_CONFIG } from '@/constants';
 import type { MoveEvaluation } from '@/types';
 
 export function MoveList() {
   const { pgnResult, selectedMoveIndex, setSelectedMove } = useAnalysisStore();
   const { goToMove } = useGameStore();
   const listRef = useRef<HTMLDivElement>(null);
+  const [legendOpen, setLegendOpen] = useState(false);
 
   const moves = pgnResult?.moves || [];
 
@@ -36,8 +40,23 @@ export function MoveList() {
   }
 
   return (
-    <div ref={listRef} className="flex-1 overflow-y-auto min-h-0">
-      <div className="space-y-px">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <ClassificationLegendModal isOpen={legendOpen} onClose={() => setLegendOpen(false)} />
+
+      <div className="sticky top-0 z-[1] flex justify-end py-1.5 mb-1 -mx-0.5 px-0.5 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-card)]">
+        <button
+          type="button"
+          onClick={() => setLegendOpen(true)}
+          className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-2 py-1 text-[10px] font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer"
+          title="What do the icons mean?"
+        >
+          <Info size={14} className="shrink-0" aria-hidden />
+          <span>Classifications</span>
+        </button>
+      </div>
+
+      <div ref={listRef} className="flex-1 overflow-y-auto min-h-0">
+        <div className="space-y-px">
         {pairs.map((pair, pairIndex) => {
           const [white, black] = pair;
           const moveNum = pairIndex + 1;
@@ -73,6 +92,7 @@ export function MoveList() {
         })}
       </div>
     </div>
+    </div>
   );
 }
 
@@ -92,8 +112,9 @@ function MoveCell({
       data-move={index}
       onClick={onClick}
       whileHover={{ backgroundColor: 'var(--color-bg-hover)' }}
+      aria-label={`${move.move}, ${CLASSIFICATION_CONFIG[move.classification].label}`}
       className={`
-        flex-1 flex items-center gap-1.5 px-2 py-1.5 text-left
+        flex-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 px-2 py-1.5 text-left min-w-0
         transition-colors duration-150 cursor-pointer rounded-[var(--radius-sm)]
         ${isSelected
           ? 'bg-[var(--color-bg-hover)] text-[var(--color-text-primary)]'
@@ -101,8 +122,10 @@ function MoveCell({
         }
       `}
     >
-      <Badge classification={move.classification} size="sm" />
-      <span className="font-mono text-xs font-medium flex-1">{move.move}</span>
+      <span className="inline-flex min-w-0 max-w-full shrink-0 items-center">
+        <Badge classification={move.classification} size="sm" showLabel />
+      </span>
+      <span className="font-mono text-xs font-medium min-w-0 flex-1 basis-[2ch]">{move.move}</span>
       {/* Per-move time (from PGN %clk if available) */}
       {(move as MoveEvaluation & { time_spent?: number }).time_spent != null && (
         <span className="text-[9px] font-mono text-[var(--color-text-muted)] ml-auto tabular-nums">

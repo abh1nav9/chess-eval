@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { PGNInput } from '@/components/analysis/PGNInput';
-import { FENInput } from '@/components/analysis/FENInput';
-import { FileText, Hash, Sparkles } from 'lucide-react';
+import { ChessComImport } from '@/components/analysis/ChessComImport';
+import { FileText, Hash, Sparkles, UserCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function SetupView() {
-  const [inputMode, setInputMode] = useState<'pgn' | 'fen'>('pgn');
+  const [inputMode, setInputMode] = useState<'pgn' | 'chesscom'>('pgn');
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto w-full px-4">
@@ -19,7 +19,8 @@ export function SetupView() {
           Chess Game Analysis
         </h1>
         <p className="text-[var(--color-text-muted)] text-lg max-w-md mx-auto">
-          Upload your PGN to get deep engine insights and move classifications.
+          Paste a PGN or pull recent games from a public Chess.com profile for engine insights and move
+          classifications.
         </p>
       </motion.div>
 
@@ -32,6 +33,7 @@ export function SetupView() {
         <Card padding="lg" className="linear-card">
           <div className="flex gap-2 mb-6 p-1 bg-[var(--color-bg-hover)] rounded-[var(--radius-md)] border border-[var(--color-border-subtle)]">
             <button
+              type="button"
               onClick={() => setInputMode('pgn')}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-[var(--radius-sm)] transition-all cursor-pointer ${
                 inputMode === 'pgn'
@@ -40,23 +42,24 @@ export function SetupView() {
               }`}
             >
               <FileText size={16} />
-              PGN Game
+              Paste PGN
             </button>
-            {/* <button
-              onClick={() => setInputMode('fen')}
+            <button
+              type="button"
+              onClick={() => setInputMode('chesscom')}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-[var(--radius-sm)] transition-all cursor-pointer ${
-                inputMode === 'fen'
+                inputMode === 'chesscom'
                   ? 'bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-lg'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
               }`}
             >
-              <Hash size={16} />
-              FEN Position
-            </button> */}
+              <UserCircle size={16} />
+              Chess.com
+            </button>
           </div>
 
           <div className="min-h-[300px]">
-            {inputMode === 'pgn' ? <PGNInput /> : <FENInput />}
+            {inputMode === 'pgn' ? <PGNInput /> : <ChessComImport />}
           </div>
         </Card>
 

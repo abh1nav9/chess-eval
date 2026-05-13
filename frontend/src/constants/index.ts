@@ -16,6 +16,20 @@ export const CLASSIFICATION_CONFIG: Record<
   blunder: { label: 'Blunder', color: 'var(--color-blunder)', symbol: '??' },
 };
 
+/** Display order for the classification legend. */
+export const CLASSIFICATION_ORDER: MoveClassification[] = [
+  'brilliant',
+  'great',
+  'book',
+  'best',
+  'excellent',
+  'good',
+  'inaccuracy',
+  'mistake',
+  'miss',
+  'blunder',
+];
+
 /** Solid RGB for board arrows (SVG cannot use CSS variables reliably). */
 export const CLASSIFICATION_ARROW_COLOR: Record<MoveClassification, string> = {
   brilliant: 'rgb(38, 166, 91)',
