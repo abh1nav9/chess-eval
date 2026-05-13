@@ -1,0 +1,23 @@
+# Chess Analysis Platform - Backend Dependencies
+
+# Web framework
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+
+# Chess
+python-chess
+
+# MongoDB
+motor
+
+# Redis (optional)
+redis
+
+# HTTP
+httpx
+
+# Utils
+python-dotenv
+python-multipart
