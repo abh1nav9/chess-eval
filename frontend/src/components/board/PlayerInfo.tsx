@@ -1,10 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { User } from 'lucide-react';
 import { useGameStore } from '@/store/gameStore';
+import { proxiedChessComAvatarUrl } from '@/utils/avatarProxy';
 
 interface PlayerInfoProps {
   name: string;
   rating?: string;
+  accuracy?: string | null;
+  title?: string | null;
+  avatarUrl?: string | null;
   color: 'white' | 'black';
   active?: boolean;
   clock?: string;
@@ -54,8 +58,22 @@ function getCapturedPieces(fen: string) {
   return { whiteCaptured, blackCaptured, advantage: whiteValue - blackValue };
 }
 
-export function PlayerInfo({ name, rating, color, active, clock }: PlayerInfoProps) {
+export function PlayerInfo({
+  name,
+  rating,
+  accuracy,
+  title,
+  avatarUrl,
+  color,
+  active,
+  clock,
+}: PlayerInfoProps) {
   const currentFen = useGameStore((s) => s.currentFen);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [avatarUrl]);
 
   const { captured, advantage } = useMemo(() => {
     const { whiteCaptured, blackCaptured, advantage } = getCapturedPieces(currentFen);
@@ -68,15 +86,31 @@ export function PlayerInfo({ name, rating, color, active, clock }: PlayerInfoPro
   return (
     <div className={`flex items-center justify-between py-1.5 px-1 transition-opacity ${active ? 'opacity-100' : 'opacity-60'}`}>
       <div className="flex items-center gap-2.5">
-        <div className={`w-7 h-7 rounded flex items-center justify-center ${
-          color === 'white'
-            ? 'bg-[var(--color-white-square)] text-[#333]'
-            : 'bg-[var(--color-black-square)] text-white border border-[var(--color-border-subtle)]'
-        }`}>
-          <User size={14} />
+        <div
+          className={`w-7 h-7 rounded overflow-hidden shrink-0 flex items-center justify-center ${
+            color === 'white'
+              ? 'bg-[var(--color-white-square)] text-[#333]'
+              : 'bg-[var(--color-black-square)] text-white border border-[var(--color-border-subtle)]'
+          }`}
+        >
+          {avatarUrl && !avatarFailed ? (
+            <img
+              src={proxiedChessComAvatarUrl(avatarUrl) ?? avatarUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              onError={() => setAvatarFailed(true)}
+            />
+          ) : (
+            <User size={14} />
+          )}
         </div>
         <div className="flex flex-col">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {title ? (
+              <span className="text-[10px] font-bold font-mono text-amber-500/95 tracking-tight">
+                {title}
+              </span>
+            ) : null}
             <span className="text-sm font-semibold text-[var(--color-text-primary)] tracking-tight">
               {name}
             </span>
@@ -85,6 +119,11 @@ export function PlayerInfo({ name, rating, color, active, clock }: PlayerInfoPro
                 {rating}
               </span>
             )}
+            {accuracy ? (
+              <span className="text-[10px] font-mono font-semibold text-[var(--color-text-secondary)] tabular-nums">
+                {accuracy}
+              </span>
+            ) : null}
           </div>
           {captured.length > 0 && (
             <div className="flex items-center gap-0.5 mt-0.5">

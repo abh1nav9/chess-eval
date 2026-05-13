@@ -1,4 +1,6 @@
 import { PageShell } from '@/components/layout/PageShell';
+import { AnalysisErrorBoundary } from '@/components/layout/AnalysisErrorBoundary';
+import { BoardErrorBoundary } from '@/components/layout/BoardErrorBoundary';
 import { ChessBoard } from '@/components/board/ChessBoard';
 import { BoardControls } from '@/components/board/BoardControls';
 import { PlayerInfo } from '@/components/board/PlayerInfo';
@@ -10,6 +12,7 @@ import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
 import { useAnalysisWebSocket } from '@/hooks/useAnalysisWebSocket';
 import { motion, AnimatePresence } from 'framer-motion';
+import { resolveChessComPlayerBar } from '@/utils/chessComBoardOverlay';
 
 export function AnalysisPage() {
   const {
@@ -20,6 +23,7 @@ export function AnalysisPage() {
     selectedMoveIndex,
     pendingAnalysisId,
     analysisProgress,
+    chessComPlayerOverlay,
   } = useAnalysisStore();
   const { isExploring, orientation } = useGameStore();
 
@@ -57,8 +61,25 @@ export function AnalysisPage() {
 
   const boardTopIsBlack = orientation === 'white';
 
+  const topColor = boardTopIsBlack ? 'black' : 'white';
+  const bottomColor = boardTopIsBlack ? 'white' : 'black';
+  const topPgnName = boardTopIsBlack ? pgnResult?.metadata.black : pgnResult?.metadata.white;
+  const bottomPgnName = boardTopIsBlack ? pgnResult?.metadata.white : pgnResult?.metadata.black;
+  const topBar = resolveChessComPlayerBar(topPgnName, topColor, chessComPlayerOverlay);
+  const bottomBar = resolveChessComPlayerBar(bottomPgnName, bottomColor, chessComPlayerOverlay);
+
+  const accLabel = (v: number | undefined) =>
+    v != null && Number.isFinite(v) ? `${v.toFixed(1)}% acc` : null;
+  const topAcc = pgnResult
+    ? accLabel(boardTopIsBlack ? pgnResult.summary.black_accuracy : pgnResult.summary.white_accuracy)
+    : null;
+  const bottomAcc = pgnResult
+    ? accLabel(boardTopIsBlack ? pgnResult.summary.white_accuracy : pgnResult.summary.black_accuracy)
+    : null;
+
   return (
     <PageShell>
+      <AnalysisErrorBoundary>
       {!hasAnalysis && !isAnalyzing && !pendingAnalysisId ? (
         <SetupView />
       ) : (
@@ -68,9 +89,13 @@ export function AnalysisPage() {
             {hasAnalysis && (
               <EvalBar eval_score={currentEval} mate_in={currentMateIn} />
             )}
+            <BoardErrorBoundary>
             <div>
               <PlayerInfo
-                name={boardTopIsBlack ? pgnResult?.metadata.black || 'Black' : pgnResult?.metadata.white || 'White'}
+                name={topBar.lineName}
+                title={topBar.title}
+                avatarUrl={topBar.avatarUrl}
+                accuracy={topAcc}
                 rating={boardTopIsBlack ? pgnResult?.metadata.black_elo : pgnResult?.metadata.white_elo}
                 color={boardTopIsBlack ? 'black' : 'white'}
                 active={boardTopIsBlack ? !!blackToMove : !!whiteToMove}
@@ -79,13 +104,17 @@ export function AnalysisPage() {
                 <ChessBoard />
               </div>
               <PlayerInfo
-                name={boardTopIsBlack ? pgnResult?.metadata.white || 'White' : pgnResult?.metadata.black || 'Black'}
+                name={bottomBar.lineName}
+                title={bottomBar.title}
+                avatarUrl={bottomBar.avatarUrl}
+                accuracy={bottomAcc}
                 rating={boardTopIsBlack ? pgnResult?.metadata.white_elo : pgnResult?.metadata.black_elo}
                 color={boardTopIsBlack ? 'white' : 'black'}
                 active={boardTopIsBlack ? !!whiteToMove : !!blackToMove}
               />
               <BoardControls />
             </div>
+            </BoardErrorBoundary>
           </div>
 
           {/* Right: Sidebar */}
@@ -110,6 +139,7 @@ export function AnalysisPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </AnalysisErrorBoundary>
     </PageShell>
   );
 }

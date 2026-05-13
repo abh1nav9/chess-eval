@@ -31,6 +31,8 @@ class MoveDocument(BaseModel):
     is_capture: bool = False
     is_castle: bool = False
     mate_in: Optional[int] = None
+    phase: Optional[str] = None
+    comment: Optional[str] = None
 
 
 class GameMetadataDocument(BaseModel):
@@ -57,16 +59,14 @@ class AnalysisSummaryDocument(BaseModel):
     avg_centipawn_loss_black: float = 0.0
     missed_wins_white: List[int] = Field(default_factory=list)
     missed_wins_black: List[int] = Field(default_factory=list)
-    missed_wins_white: int = 0
-    missed_wins_black: int = 0
-    missed_wins_white: List[int] = Field(default_factory=list)
-    missed_wins_black: List[int] = Field(default_factory=list)
 
 
 class AnalysisDocument(BaseModel):
     analysis_id: str = Field(default_factory=generate_id)
     game_id: str = Field(default_factory=generate_id)
     status: str = "pending"
+    # SHA-256 hex of normalized PGN (dedup / Chess.com flags).
+    pgn_hash: str = ""
     pgn: str = ""
     metadata: GameMetadataDocument = Field(default_factory=GameMetadataDocument)
     moves: List[MoveDocument] = Field(default_factory=list)

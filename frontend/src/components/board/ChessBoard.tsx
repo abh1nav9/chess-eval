@@ -10,6 +10,8 @@ import type { Square } from 'chess.js';
 import { analysisService } from '@/services/analysisService';
 import { classifyLiveMove } from '@/utils/classifyLiveMove';
 import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
+import { BOARD_THEMES } from '@/constants/boardTheme';
+import { useUIStore } from '@/store/uiStore';
 
 type ArrowTuple = [Square, Square, string?];
 
@@ -100,6 +102,8 @@ function getCurrentEval(): number {
 
 export function ChessBoard() {
   const { currentFen, orientation, makeMove, isExploring, currentMoveIndex } = useGameStore();
+  const boardTheme = useUIStore((s) => s.boardTheme);
+  const sqColors = BOARD_THEMES[boardTheme] ?? BOARD_THEMES.classic;
   const {
     pgnResult,
     selectedMoveIndex,
@@ -366,8 +370,8 @@ export function ChessBoard() {
         areArrowsAllowed={true}
         customArrows={customArrows}
         customBoardStyle={{ borderRadius: 'var(--radius-lg)' }}
-        customDarkSquareStyle={{ backgroundColor: '#739552' }}
-        customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
+        customDarkSquareStyle={{ backgroundColor: sqColors.dark }}
+        customLightSquareStyle={{ backgroundColor: sqColors.light }}
         customSquareStyles={customSquareStyles}
         customSquare={customSquare}
         animationDuration={200}

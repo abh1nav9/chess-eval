@@ -20,6 +20,8 @@ class EngineConfig:
     path: str = "/usr/local/bin/stockfish"
     depth: int = 64
     movetime: Optional[int] = None  # ms; None or 0 = depth-only search (full depth)
+    # Combined with depth in `go depth N movetime M` so searches cannot hang indefinitely.
+    max_movetime_ms: Optional[int] = 10_000
     threads: int = 2
     hash_mb: int = 128
     multi_pv: int = 3  # number of principal variations

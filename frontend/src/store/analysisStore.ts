@@ -6,6 +6,7 @@ import type {
   MoveClassification,
   AnalysisProgressState,
 } from '@/types';
+import type { ChessComBoardPlayerOverlay } from '@/utils/chessComBoardOverlay';
 
 /** Lightweight eval for a live (exploration) move. */
 export interface ExplorationMove {
@@ -33,6 +34,9 @@ interface AnalysisState {
   // Live exploration move evaluations (keyed by move index)
   explorationMoves: ExplorationMove[];
 
+  /** Set when analyzing a game started from Chess.com import; drives board player chrome. */
+  chessComPlayerOverlay: ChessComBoardPlayerOverlay | null;
+
   setPGNResult: (result: PGNAnalysisResult) => void;
   setFENResult: (result: FENAnalysisResult) => void;
   setAnalyzing: (loading: boolean) => void;
@@ -44,6 +48,7 @@ interface AnalysisState {
   getCurrentMoveEval: () => MoveEvaluation | null;
   addExplorationMove: (move: ExplorationMove) => void;
   clearExplorationMoves: () => void;
+  setChessComPlayerOverlay: (overlay: ChessComBoardPlayerOverlay | null) => void;
   reset: () => void;
 }
 
@@ -57,6 +62,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   pendingAnalysisId: null,
   analysisProgress: null,
   explorationMoves: [],
+  chessComPlayerOverlay: null,
 
   setPGNResult: (result) =>
     set({
@@ -70,12 +76,29 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       explorationMoves: [],
     }),
   setFENResult: (result) =>
-    set({ fenResult: result, analysisError: null, mode: 'fen', isAnalyzing: false }),
+    set({
+      pgnResult: null,
+      fenResult: result,
+      analysisError: null,
+      mode: 'fen',
+      isAnalyzing: false,
+      chessComPlayerOverlay: null,
+      pendingAnalysisId: null,
+      analysisProgress: null,
+      selectedMoveIndex: -1,
+      explorationMoves: [],
+    }),
   setAnalyzing: (loading) => set({ isAnalyzing: loading }),
   setPendingAnalysisId: (id) => set({ pendingAnalysisId: id, isAnalyzing: true }),
   setProgress: (progress) => set({ analysisProgress: progress }),
   setError: (error) =>
-    set({ analysisError: error, isAnalyzing: false, analysisProgress: null, pendingAnalysisId: null }),
+    set({
+      analysisError: error,
+      isAnalyzing: false,
+      analysisProgress: null,
+      pendingAnalysisId: null,
+      chessComPlayerOverlay: null,
+    }),
   setMode: (mode) => set({ mode }),
   setSelectedMove: (index) => set({ selectedMoveIndex: index }),
 
@@ -95,6 +118,8 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
   clearExplorationMoves: () => set({ explorationMoves: [] }),
 
+  setChessComPlayerOverlay: (overlay) => set({ chessComPlayerOverlay: overlay }),
+
   reset: () =>
     set({
       pgnResult: null,
@@ -106,5 +131,6 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       analysisProgress: null,
       pendingAnalysisId: null,
       explorationMoves: [],
+      chessComPlayerOverlay: null,
     }),
 }));

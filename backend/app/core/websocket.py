@@ -1,9 +1,10 @@
-import json
 import logging
 from typing import Any, Dict, Set
 
 from fastapi import WebSocket
 from pydantic import BaseModel
+
+from app.schemas.ws_events import ProgressEvent
 
 logger = logging.getLogger(__name__)
 
@@ -44,23 +45,17 @@ class ConnectionManager:
             self.active_connections[analysis_id].discard(d)
 
     async def broadcast_progress(self, analysis_id: str, progress: Dict[str, Any]):
-        """Legacy dict broadcast — serializes with json."""
-        if analysis_id not in self.active_connections:
-            return
-        dead: set[WebSocket] = set()
-        try:
-            payload_str = json.dumps(progress, default=str)
-        except Exception as e:
-            logger.warning(f"Failed to serialize WS payload: {e}")
-            return
-        for conn in self.active_connections[analysis_id]:
-            try:
-                await conn.send_text(payload_str)
-            except Exception as e:
-                logger.warning(f"Failed to send WS message: {e}")
-                dead.add(conn)
-        for d in dead:
-            self.active_connections[analysis_id].discard(d)
+        """Normalize dict payloads to typed ProgressEvent and broadcast."""
+        ev = ProgressEvent(
+            analysis_id=progress.get("analysis_id"),
+            move_index=int(progress.get("move_index", 0)),
+            total_moves=int(progress.get("total_moves", 0)),
+            percentage=float(progress.get("percentage", 0.0)),
+            current_san=progress.get("current_san"),
+            status_message=progress.get("status") or progress.get("status_message"),
+            last_move=progress.get("last_move"),
+        )
+        await self.broadcast(analysis_id, ev)
 
 
 manager = ConnectionManager()

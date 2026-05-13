@@ -32,6 +32,8 @@ export interface MoveEvaluation {
   is_capture: boolean;
   is_castle: boolean;
   mate_in: number | null;
+  phase?: string | null;
+  comment?: string | null;
 }
 
 export interface GameMetadata {
@@ -87,6 +89,8 @@ export interface AnalysisProgressState {
   totalMoves: number;
   currentSan: string | null;
   statusMessage: string | null;
+  /** Wall-clock ms when first progress with known move count arrived (for ETA). */
+  startedAtMs?: number;
 }
 
 export interface FENAnalysisResult {

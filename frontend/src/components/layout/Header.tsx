@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Crown, Sun, Moon, Plus } from 'lucide-react';
+import { Crown, Sun, Moon, Plus, Library, BarChart3, BookOpen, LineChart } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
@@ -35,6 +35,34 @@ export function Header() {
         </Link>
 
         <div className="flex items-center gap-3">
+          <Link
+            to="/stats"
+            className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] flex items-center gap-1"
+          >
+            <BarChart3 size={14} aria-hidden />
+            Stats
+          </Link>
+          <Link
+            to="/repertoire"
+            className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] flex items-center gap-1"
+          >
+            <LineChart size={14} aria-hidden />
+            Repertoire
+          </Link>
+          <Link
+            to="/studies"
+            className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] flex items-center gap-1"
+          >
+            <BookOpen size={14} aria-hidden />
+            Studies
+          </Link>
+          <Link
+            to="/library"
+            className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] flex items-center gap-1"
+          >
+            <Library size={14} aria-hidden />
+            Library
+          </Link>
           {showNewGame && (
             <Button variant="outline" size="sm" onClick={handleAnalyzeNewGame} className="gap-1.5 shrink-0">
               <Plus size={14} aria-hidden />

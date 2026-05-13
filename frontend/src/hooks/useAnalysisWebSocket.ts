@@ -17,6 +17,8 @@ export function useAnalysisWebSocket(analysisId: string | null) {
   const reconnectDelay = useRef(INITIAL_RECONNECT_DELAY);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const doneRef = useRef(false);
+  const progressStartedAtRef = useRef<number | null>(null);
+  const connectRef = useRef<(() => void) | null>(null);
 
   const cleanup = useCallback(() => {
     if (reconnectTimer.current) {
@@ -60,7 +62,20 @@ export function useAnalysisWebSocket(analysisId: string | null) {
               : typeof lastMove?.move === 'string'
                 ? lastMove.move
                 : null;
-          const statusMessage = typeof data.status === 'string' ? data.status : null;
+          const statusMessage =
+            typeof data.status_message === 'string'
+              ? data.status_message
+              : typeof data.status === 'string'
+                ? data.status
+                : null;
+
+          let startedAtMs: number | undefined;
+          if (totalMoves > 0) {
+            if (progressStartedAtRef.current === null) {
+              progressStartedAtRef.current = Date.now();
+            }
+            startedAtMs = progressStartedAtRef.current;
+          }
 
           setProgress({
             percentage,
@@ -68,8 +83,10 @@ export function useAnalysisWebSocket(analysisId: string | null) {
             totalMoves,
             currentSan,
             statusMessage,
+            startedAtMs,
           });
         } else if (data.type === 'completed') {
+          progressStartedAtRef.current = null;
           doneRef.current = true;
           const result = data.result as PGNAnalysisResult;
           setPGNResult(result);
@@ -79,6 +96,7 @@ export function useAnalysisWebSocket(analysisId: string | null) {
           }
           socket.close();
         } else if (data.type === 'failed') {
+          progressStartedAtRef.current = null;
           doneRef.current = true;
           setError(typeof data.error === 'string' ? data.error : 'Analysis failed');
           socket.close();
@@ -93,7 +111,7 @@ export function useAnalysisWebSocket(analysisId: string | null) {
       if (!e.wasClean && reconnectDelay.current < MAX_RECONNECT_DELAY) {
         reconnectTimer.current = setTimeout(() => {
           reconnectDelay.current = Math.min(reconnectDelay.current * 2, MAX_RECONNECT_DELAY);
-          connect();
+          connectRef.current?.();
         }, reconnectDelay.current);
       }
     };
@@ -104,11 +122,17 @@ export function useAnalysisWebSocket(analysisId: string | null) {
   }, [analysisId, setProgress, setPGNResult, setError, loadGame, cleanup]);
 
   useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
+  useEffect(() => {
+    progressStartedAtRef.current = null;
+  }, [analysisId]);
+
+  useEffect(() => {
     doneRef.current = false;
     reconnectDelay.current = INITIAL_RECONNECT_DELAY;
     connect();
     return cleanup;
   }, [connect, cleanup]);
-
-  return socketRef.current;
 }

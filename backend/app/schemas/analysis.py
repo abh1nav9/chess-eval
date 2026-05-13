@@ -16,11 +16,13 @@ from pydantic import BaseModel, Field
 class MoveClassification(str, Enum):
     """Move quality classification based on centipawn loss."""
     BRILLIANT = "brilliant"
+    GREAT = "great"
     BEST = "best"
     EXCELLENT = "excellent"
     GOOD = "good"
     INACCURACY = "inaccuracy"
     MISTAKE = "mistake"
+    MISS = "miss"
     BLUNDER = "blunder"
     BOOK = "book"
 
@@ -84,6 +86,8 @@ class MoveEvaluation(BaseModel):
     is_capture: bool = Field(False, description="Whether this move is a capture")
     is_castle: bool = Field(False, description="Whether this move is castling")
     mate_in: Optional[int] = Field(None, description="Mate in N moves (if applicable)")
+    phase: Optional[str] = Field(None, description="opening | middlegame | endgame")
+    comment: Optional[str] = Field(None, description="PGN comment after the move, if any")
 
 
 class GameMetadata(BaseModel):

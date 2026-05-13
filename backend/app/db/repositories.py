@@ -59,14 +59,37 @@ class AnalysisRepository:
         return result.modified_count > 0
 
     @staticmethod
-    async def list_recent(limit: int = 20, skip: int = 0) -> List[Dict[str, Any]]:
+    async def get_created_at_for_analysis(analysis_id: str) -> Optional[datetime]:
         collection = MongoDBClient.analyses_collection()
-        cursor = (
-            collection.find({}, {"moves": 0})
-            .sort("created_at", -1)
-            .skip(skip)
-            .limit(limit)
-        )
+        doc = await collection.find_one({"_id": analysis_id}, {"created_at": 1})
+        if not doc:
+            return None
+        return doc.get("created_at")
+
+    @staticmethod
+    async def list_recent(
+        limit: int = 20,
+        skip: int = 0,
+        before_created_at: Optional[datetime] = None,
+    ) -> List[Dict[str, Any]]:
+        collection = MongoDBClient.analyses_collection()
+        query: Dict[str, Any] = {}
+        if before_created_at is not None:
+            query["created_at"] = {"$lt": before_created_at}
+        cursor = collection.find(
+            query,
+            {
+                "moves": 0,
+                "pgn": 0,
+                "summary.white_accuracy": 1,
+                "summary.black_accuracy": 1,
+                "metadata.opening": 1,
+                "metadata.eco": 1,
+            },
+        ).sort("created_at", -1)
+        if before_created_at is None:
+            cursor = cursor.skip(skip)
+        cursor = cursor.limit(limit)
         results = []
         async for doc in cursor:
             doc.pop("_id", None)
@@ -83,6 +106,97 @@ class AnalysisRepository:
         collection = MongoDBClient.analyses_collection()
         result = await collection.delete_one({"_id": analysis_id})
         return result.deleted_count > 0
+
+    @staticmethod
+    async def sweep_stale_processing(minutes: int) -> int:
+        """Mark long-running processing jobs as failed (server restart / crash)."""
+        collection = MongoDBClient.analyses_collection()
+        cutoff = datetime.utcnow() - timedelta(minutes=minutes)
+        result = await collection.update_many(
+            {"status": "processing", "created_at": {"$lt": cutoff}},
+            {
+                "$set": {
+                    "status": "failed",
+                    "error_message": "stale_processing_timeout",
+                    "updated_at": datetime.utcnow(),
+                }
+            },
+        )
+        return int(result.modified_count)
+
+    @staticmethod
+    async def processing_stats() -> tuple[int, float | None]:
+        """Return (count of processing docs, age in seconds of oldest processing doc)."""
+        collection = MongoDBClient.analyses_collection()
+        n = await collection.count_documents({"status": "processing"})
+        if n == 0:
+            return 0, None
+        doc = await collection.find_one({"status": "processing"}, sort=[("created_at", 1)])
+        if not doc or not doc.get("created_at"):
+            return n, None
+        created = doc["created_at"]
+        age = (datetime.utcnow() - created).total_seconds()
+        return n, max(0.0, age)
+
+    @staticmethod
+    async def find_completed_ids_by_pgn_hashes(hashes: List[str]) -> Dict[str, str]:
+        """Map pgn_hash -> newest completed analysis_id."""
+        if not hashes:
+            return {}
+        collection = MongoDBClient.analyses_collection()
+        out: Dict[str, str] = {}
+        cursor = collection.aggregate(
+            [
+                {"$match": {"pgn_hash": {"$in": hashes}, "status": "completed"}},
+                {"$sort": {"created_at": -1}},
+                {"$group": {"_id": "$pgn_hash", "aid": {"$first": "$analysis_id"}}},
+            ]
+        )
+        async for row in cursor:
+            hid = row.get("_id")
+            aid = row.get("aid")
+            if isinstance(hid, str) and isinstance(aid, str):
+                out[hid] = aid
+        return out
+
+
+class PgnContentRepository:
+    """Deduplicated full PGN text by SHA-256 (analysis.md §3.3)."""
+
+    @staticmethod
+    async def upsert(pgn_hash: str, pgn_text: str) -> None:
+        coll = MongoDBClient.pgns_collection()
+        now = datetime.utcnow()
+        await coll.update_one(
+            {"_id": pgn_hash},
+            {
+                "$set": {"pgn": pgn_text, "updated_at": now},
+                "$setOnInsert": {"created_at": now},
+            },
+            upsert=True,
+        )
+
+
+class ChessComProfileCacheRepository:
+    """TTL-cached Chess.com ``pub/player`` JSON (analysis.md §2.2 / §5.4)."""
+
+    @staticmethod
+    async def get_json(username: str) -> Optional[Dict[str, Any]]:
+        coll = MongoDBClient.chesscom_profile_cache_collection()
+        doc = await coll.find_one({"_id": username.lower()})
+        if not doc:
+            return None
+        payload = doc.get("payload")
+        return payload if isinstance(payload, dict) else None
+
+    @staticmethod
+    async def put_json(username: str, payload: Dict[str, Any]) -> None:
+        coll = MongoDBClient.chesscom_profile_cache_collection()
+        await coll.update_one(
+            {"_id": username.lower()},
+            {"$set": {"payload": payload, "cached_at": datetime.utcnow()}},
+            upsert=True,
+        )
 
 
 class PositionCacheRepository:

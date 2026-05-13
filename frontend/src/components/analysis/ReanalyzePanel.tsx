@@ -15,7 +15,7 @@ const DEPTH_OPTIONS = [
 ];
 
 export function ReanalyzePanel() {
-  const { pgnResult, isAnalyzing } = useAnalysisStore();
+  const { pgnResult, isAnalyzing, chessComPlayerOverlay } = useAnalysisStore();
   const { loadGame } = useGameStore();
   const submitPGN = useSubmitPGN();
   const [selectedDepth, setSelectedDepth] = useState(DEFAULT_PGN_DEPTH);
@@ -27,7 +27,11 @@ export function ReanalyzePanel() {
   const handleReanalyze = () => {
     if (!pgnResult.pgn) return;
     loadGame(pgnResult.pgn);
-    submitPGN.mutate({ pgn: pgnResult.pgn, depth: selectedDepth });
+    submitPGN.mutate({
+      pgn: pgnResult.pgn,
+      depth: selectedDepth,
+      chessComPlayerOverlay: chessComPlayerOverlay ?? undefined,
+    });
   };
 
   return (

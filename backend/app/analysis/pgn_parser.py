@@ -26,6 +26,7 @@ class ParsedMove:
     is_check: bool = False
     is_capture: bool = False
     is_castle: bool = False
+    comment: str = ""
 
 
 @dataclass
@@ -73,18 +74,20 @@ def parse_pgn(pgn_string: str) -> ParsedGame:
     parsed_moves: List[ParsedMove] = []
     move_number = 1
 
-    for node in game.mainline():
+    node = game
+    while node.variations:
+        node = node.variation(0)
         move = node.move
+        comment = (node.comment or "").strip()
+
         fen_before = board.fen()
 
-        # Determine move properties before pushing
         san = board.san(move)
         uci = move.uci()
         is_capture = board.is_capture(move)
         is_castle = board.is_castling(move)
         color = "white" if board.turn == chess.WHITE else "black"
 
-        # Push the move
         board.push(move)
 
         fen_after = board.fen()
@@ -101,10 +104,10 @@ def parse_pgn(pgn_string: str) -> ParsedGame:
                 is_check=is_check,
                 is_capture=is_capture,
                 is_castle=is_castle,
+                comment=comment,
             )
         )
 
-        # Increment move number after black's move
         if color == "black":
             move_number += 1
 
@@ -120,9 +123,18 @@ def parse_pgn(pgn_string: str) -> ParsedGame:
 
 def validate_pgn(pgn_string: str) -> bool:
     """Check if a PGN string is valid and parseable."""
+    ok, _ = validate_pgn_playthrough(pgn_string)
+    return ok
+
+
+def validate_pgn_playthrough(pgn_string: str) -> tuple[bool, str | None]:
+    """Parse PGN and replay all mainline moves; return (ok, error_message)."""
     try:
-        pgn_io = io.StringIO(pgn_string.strip())
-        game = chess.pgn.read_game(pgn_io)
-        return game is not None and len(list(game.mainline())) > 0
-    except Exception:
-        return False
+        pg = parse_pgn(pgn_string)
+        if len(pg.moves) == 0:
+            return False, "PGN contains no moves"
+        return True, None
+    except ValueError as e:
+        return False, str(e)
+    except Exception as e:
+        return False, str(e)

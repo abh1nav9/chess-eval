@@ -8,7 +8,9 @@ from typing import Dict, List
 import chess
 
 from app.analysis.classifier import Classification
+from app.analysis.game_phase import detect_game_phase
 from app.analysis.pgn_parser import ParsedGame, ParsedMove
+from app.core.config import get_settings
 from app.engine.types import EngineResult, EngineScore, ScoreType
 from app.engine.white_pov import WhitePovEngineNormalizer
 from app.models.analysis import GameMetadataDocument, MoveDocument
@@ -64,6 +66,7 @@ def extract_game_metadata(game: ParsedGame) -> GameMetadataDocument:
 
 def build_book_move_doc(parsed_move: ParsedMove) -> MoveDocument:
     """Create a MoveDocument for a book/opening move (no engine eval)."""
+    board_before = chess.Board(parsed_move.fen_before)
     return MoveDocument(
         move_number=parsed_move.move_number,
         move=parsed_move.san,
@@ -78,6 +81,8 @@ def build_book_move_doc(parsed_move: ParsedMove) -> MoveDocument:
         is_check=parsed_move.is_check,
         is_capture=parsed_move.is_capture,
         is_castle=parsed_move.is_castle,
+        phase=detect_game_phase(board_before),
+        comment=(parsed_move.comment or None) or None,
     )
 
 
@@ -97,5 +102,7 @@ def cached_to_engine_result(cached: Dict) -> EngineResult:
     )
     fen = cached.get("fen", "")
     if cached.get("eval_white_pov") is True or not fen:
+        return r
+    if get_settings().CACHE_STRICT_WHITE_POV:
         return r
     return WhitePovEngineNormalizer.engine_result(fen, r)

@@ -20,6 +20,10 @@ class HealthResponse(BaseModel):
     stockfish_version: Optional[str] = Field(
         None, description="UCI id name string from the configured binary, if available"
     )
+    processing_queue_depth: int = Field(0, description="Analyses currently in processing status")
+    oldest_processing_age_seconds: Optional[float] = Field(
+        None, description="Age of oldest processing job, if any"
+    )
 
 
 class ErrorResponse(BaseModel):

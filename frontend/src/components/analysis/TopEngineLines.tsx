@@ -1,10 +1,12 @@
 import { useAnalysisStore } from '@/store/analysisStore';
+import { useGameStore } from '@/store/gameStore';
 import { CLASSIFICATION_CONFIG } from '@/constants';
 
 export function TopEngineLines() {
   const { pgnResult, fenResult, selectedMoveIndex, mode } = useAnalysisStore();
+  const isExploring = useGameStore((s) => s.isExploring);
 
-  if (mode === 'fen' && fenResult) {
+  if (fenResult && (isExploring || mode === 'fen')) {
     return <FENLines lines={fenResult.top_lines} />;
   }
 

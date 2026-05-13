@@ -3,17 +3,25 @@ import { analysisService } from '@/services/analysisService';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useGameStore } from '@/store/gameStore';
 import type { PGNAnalysisRequest, FENAnalysisRequest } from '@/types';
+import type { ChessComBoardPlayerOverlay } from '@/utils/chessComBoardOverlay';
 import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 
+export type SubmitPgnMutationVariables = PGNAnalysisRequest & {
+  chessComPlayerOverlay?: ChessComBoardPlayerOverlay | null;
+};
+
 export function useSubmitPGN() {
-  const { setPGNResult, setAnalyzing, setError, setPendingAnalysisId } = useAnalysisStore();
+  const { setPGNResult, setAnalyzing, setError, setPendingAnalysisId, setChessComPlayerOverlay } =
+    useAnalysisStore();
   const { loadGame } = useGameStore();
 
   return useMutation({
-    mutationFn: (request: PGNAnalysisRequest) => analysisService.analyzePGN(request),
-    onMutate: () => {
+    mutationFn: ({ chessComPlayerOverlay: _overlay, ...request }: SubmitPgnMutationVariables) =>
+      analysisService.analyzePGN(request),
+    onMutate: (variables) => {
       setAnalyzing(true);
       setError(null);
+      setChessComPlayerOverlay(variables.chessComPlayerOverlay ?? null);
     },
     onSuccess: (data) => {
       if (data.analysis_id) {
@@ -51,7 +59,7 @@ export function useSubmitFEN() {
 }
 
 export function useGetAnalysis(analysisId: string | undefined) {
-  const { setPGNResult } = useAnalysisStore();
+  const { setPGNResult, setChessComPlayerOverlay } = useAnalysisStore();
   const { loadGame } = useGameStore();
 
   return useQuery({
@@ -59,6 +67,7 @@ export function useGetAnalysis(analysisId: string | undefined) {
     queryFn: async () => {
       if (!analysisId) throw new Error('No analysis ID');
       const data = await analysisService.getAnalysis(analysisId);
+      setChessComPlayerOverlay(null);
       setPGNResult(data);
       loadGame(data.pgn);
       if (data.pgn) gameSoundCoordinator.onPgnAnalysisReady(data.pgn);

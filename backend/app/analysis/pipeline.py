@@ -4,14 +4,18 @@ Coordinates PGN parsing, engine evaluation, move classification, and result asse
 """
 
 import logging
+from datetime import datetime
 from typing import List, Optional
 
 import chess
 
 from app.analysis.accuracy import game_accuracy, move_accuracy
 from app.analysis.classifier import Classification, MoveClassifier
+from app.analysis.game_phase import detect_game_phase
 from app.analysis.missed_wins import find_missed_wins
 from app.analysis.opening import detect_opening, opening_book_depth
+from app.analysis.depth_strategy import resolve_depth_from_swing
+from app.analysis.polyglot_book import PolyglotBookProbe
 from app.analysis.pgn_parser import ParsedGame, ParsedMove, parse_pgn
 from app.analysis.pipeline_helpers import (
     build_book_move_doc,
@@ -22,7 +26,7 @@ from app.analysis.pipeline_helpers import (
 )
 from app.db.repositories import PositionCacheRepository
 from app.engine.stockfish import StockfishEngine
-from app.engine.types import EngineConfig, EngineResult
+from app.engine.types import EngineConfig, EngineResult, EngineScore
 from app.models.analysis import (
     AnalysisDocument,
     AnalysisSummaryDocument,
@@ -30,6 +34,7 @@ from app.models.analysis import (
     PositionCacheDocument,
 )
 from app.utils.fen import fen_to_hash, validate_fen
+from app.core.config import get_settings
 from app.core.websocket import manager
 
 logger = logging.getLogger(__name__)
@@ -43,13 +48,14 @@ class AnalysisPipeline:
 
     def __init__(self, engine_config: EngineConfig):
         self.engine_config = engine_config
-        self.classifier = MoveClassifier()
+        self.classifier = MoveClassifier(get_settings())
 
     async def analyze_pgn(
         self,
         pgn_string: str,
         analysis_id: str,
         depth: Optional[int] = None,
+        shared_engine: Optional[StockfishEngine] = None,
     ) -> AnalysisDocument:
         """Run full analysis on a PGN game."""
         parsed_game = parse_pgn(pgn_string)
@@ -69,11 +75,22 @@ class AnalysisPipeline:
             metadata=extract_game_metadata(parsed_game),
         )
 
-        async with StockfishEngine(self.engine_config) as engine:
-            await engine.new_game()
-            move_documents = await self._evaluate_moves(
-                engine, parsed_game.moves, analysis_depth, analysis_id
-            )
+        poly_probe = PolyglotBookProbe.try_open(get_settings().OPENING_POLYGLOT_PATH or "")
+        try:
+            if shared_engine is not None:
+                await shared_engine.new_game()
+                move_documents = await self._evaluate_moves(
+                    shared_engine, parsed_game.moves, analysis_depth, analysis_id, poly_probe
+                )
+            else:
+                async with StockfishEngine(self.engine_config) as engine:
+                    await engine.new_game()
+                    move_documents = await self._evaluate_moves(
+                        engine, parsed_game.moves, analysis_depth, analysis_id, poly_probe
+                    )
+        finally:
+            if poly_probe is not None:
+                poly_probe.close()
 
         doc.moves = move_documents
         doc.summary = self._compute_summary(move_documents)
@@ -87,6 +104,7 @@ class AnalysisPipeline:
             doc.metadata.opening = name
 
         doc.status = "completed"
+        doc.completed_at = datetime.utcnow()
         return doc
 
     async def analyze_fen(
@@ -94,6 +112,7 @@ class AnalysisPipeline:
         fen: str,
         depth: Optional[int] = None,
         num_lines: int = 3,
+        shared_engine: Optional[StockfishEngine] = None,
     ) -> dict:
         """Analyze a single FEN position with multi-PV."""
         if not validate_fen(fen):
@@ -101,11 +120,18 @@ class AnalysisPipeline:
 
         analysis_depth = depth or self.engine_config.depth
         board = chess.Board(fen)
+        settings = get_settings()
+        mv_ms = min(5000, settings.STOCKFISH_MAX_MOVETIME_MS) if settings.STOCKFISH_MAX_MOVETIME_MS else 5000
 
-        async with StockfishEngine(self.engine_config) as engine:
-            results = await engine.analyze_position_multi_pv(
-                fen, num_lines=num_lines, depth=analysis_depth
+        if shared_engine is not None:
+            results = await shared_engine.analyze_position_multi_pv(
+                fen, num_lines=num_lines, depth=analysis_depth, movetime=mv_ms
             )
+        else:
+            async with StockfishEngine(self.engine_config) as engine:
+                results = await engine.analyze_position_multi_pv(
+                    fen, num_lines=num_lines, depth=analysis_depth, movetime=mv_ms
+                )
 
         if not results:
             raise RuntimeError("Engine returned no results")
@@ -143,30 +169,39 @@ class AnalysisPipeline:
             "top_lines": lines,
         }
 
+    @staticmethod
+    def _cp_swing_from_score(sc: EngineScore) -> int:
+        if sc.is_mate:
+            v = sc.value
+            return 10000 if v > 0 else -10000 if v < 0 else 0
+        return int(sc.value)
+
     async def _evaluate_moves(
         self,
         engine: StockfishEngine,
         moves: List[ParsedMove],
         depth: int,
         analysis_id: str,
+        poly_probe: Optional[PolyglotBookProbe] = None,
     ) -> List[MoveDocument]:
-        """Evaluate each position once with single PV + movetime cap.
-
-        Optimization: the 'after' eval of move N is reused as the 'before' eval of move N+1
-        since they're the same position. This halves the number of engine calls.
-        """
+        """Evaluate each position with optional Polyglot book, two-pass depth, MultiPV."""
         if not moves:
             return []
 
         fens_before = [m.fen_before for m in moves]
         last_book_ply = opening_book_depth(fens_before)
+        settings = get_settings()
+        mv_ms = min(2000, settings.STOCKFISH_MAX_MOVETIME_MS) if settings.STOCKFISH_MAX_MOVETIME_MS else 2000
+        nlines = settings.STOCKFISH_PGN_MULTIPV_LINES
+        cheap_depth = min(settings.ANALYSIS_CHEAP_PASS_DEPTH, depth or GAME_ANALYSIS_DEPTH)
+        mt_cheap = min(400, mv_ms)
 
         move_documents: List[MoveDocument] = []
         prev_eval = 0.0
         prev_mate: Optional[int] = None
         carried_result: Optional[EngineResult] = None
 
-        use_tiered_depth = (depth == GAME_ANALYSIS_DEPTH)
+        use_tiered_depth = depth == GAME_ANALYSIS_DEPTH
 
         for i, parsed_move in enumerate(moves):
             if i <= last_book_ply:
@@ -175,34 +210,74 @@ class AnalysisPipeline:
                 carried_result = None
                 continue
 
-            if use_tiered_depth:
+            if poly_probe is not None and i > last_book_ply and i < settings.OPENING_POLYGLOT_MAX_PLY:
+                try:
+                    bb = chess.Board(parsed_move.fen_before)
+                    mv = chess.Move.from_uci(parsed_move.uci)
+                    if poly_probe.is_played_move_in_book(bb, mv):
+                        move_documents.append(build_book_move_doc(parsed_move))
+                        await self._broadcast_progress(analysis_id, i, len(moves), move_documents[-1])
+                        carried_result = None
+                        continue
+                except ValueError:
+                    pass
+
+            if use_tiered_depth and settings.ANALYSIS_TWO_PASS_ENABLED:
+                cr_b = await engine.analyze_position(
+                    parsed_move.fen_before, depth=cheap_depth, movetime=mt_cheap
+                )
+                cr_a = await engine.analyze_position(
+                    parsed_move.fen_after, depth=cheap_depth, movetime=mt_cheap
+                )
+                swing_cp = abs(
+                    self._cp_swing_from_score(cr_b.score) - self._cp_swing_from_score(cr_a.score)
+                )
+                cur_depth = resolve_depth_from_swing(
+                    i, swing_cp, GAME_ANALYSIS_DEPTH, settings.MAX_ANALYSIS_DEPTH
+                )
+            elif use_tiered_depth:
                 cur_depth = self._get_depth_for_position(i, prev_eval * 100, 0.0)
             else:
                 cur_depth = depth
 
-            # "Before" eval: reuse carried result from previous "after" when available
+            multipv_alt: Optional[list[float]] = None
+
             if carried_result is not None:
                 before_result = carried_result
-            else:
-                before_result = await self._get_eval_with_cache(
-                    engine, parsed_move.fen_before, cur_depth
+                best_move_uci = before_result.best_move
+                best_move_eval = before_result.score.to_pawn_value()
+                eval_before = best_move_eval
+                after_result = await self._get_eval_with_cache(
+                    engine, parsed_move.fen_after, cur_depth
                 )
+            else:
+                lines = await engine.analyze_position_multi_pv(
+                    parsed_move.fen_before,
+                    num_lines=nlines,
+                    depth=cur_depth,
+                    movetime=mv_ms,
+                )
+                before_result = lines[0]
+                best_move_uci = before_result.best_move
+                best_move_eval = before_result.score.to_pawn_value()
+                eval_before = best_move_eval
+                played_line = next((r for r in lines if r.best_move == parsed_move.uci), None)
+                if played_line is not None:
+                    after_result = played_line
+                else:
+                    after_result = await self._get_eval_with_cache(
+                        engine, parsed_move.fen_after, cur_depth
+                    )
+                if len(lines) > 1:
+                    multipv_alt = [r.score.to_pawn_value() for r in lines[1:]]
 
-            best_move_eval = before_result.score.to_pawn_value()
-            best_move_uci = before_result.best_move
-            eval_before = best_move_eval
-
-            # "After" eval: single call per move (will be carried forward as next "before")
-            after_result = await self._get_eval_with_cache(
-                engine, parsed_move.fen_after, cur_depth
-            )
             eval_after = after_result.score.to_pawn_value()
             mate_after = after_result.mate_in
             carried_result = after_result
 
-            # Classification
             board_before = chess.Board(parsed_move.fen_before)
             best_move_san = uci_to_san(board_before, best_move_uci)
+            phase = detect_game_phase(board_before)
 
             classification = self.classifier.classify(
                 eval_before=eval_before,
@@ -214,9 +289,12 @@ class AnalysisPipeline:
                 mate_before=prev_mate,
                 mate_after=mate_after,
                 mate_best=before_result.mate_in,
+                board_before=board_before,
+                multipv_alt_root_pawns=multipv_alt
+                if (multipv_alt and parsed_move.uci == best_move_uci)
+                else None,
             )
 
-            # Centipawn loss
             if parsed_move.color == "white":
                 cp_loss = max(0.0, (best_move_eval - eval_after) * 100)
             else:
@@ -243,6 +321,8 @@ class AnalysisPipeline:
                 is_capture=parsed_move.is_capture,
                 is_castle=parsed_move.is_castle,
                 mate_in=mate_after,
+                phase=phase,
+                comment=(parsed_move.comment or None) or None,
             )
 
             move_documents.append(move_doc)
@@ -336,7 +416,9 @@ class AnalysisPipeline:
         if cached:
             return cached_to_engine_result(cached)
 
-        result = await engine.analyze_position(fen, depth=depth, movetime=2000)
+        settings = get_settings()
+        mt = min(2000, settings.STOCKFISH_MAX_MOVETIME_MS) if settings.STOCKFISH_MAX_MOVETIME_MS else 2000
+        result = await engine.analyze_position(fen, depth=depth, movetime=mt)
 
         await self._try_cache_result(fen, fen_hash, result)
         return result

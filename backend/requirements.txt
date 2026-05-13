@@ -21,3 +21,8 @@ httpx
 # Utils
 python-dotenv
 python-multipart
+structlog
+
+# Tests
+pytest
+httpx

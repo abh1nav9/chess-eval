@@ -74,6 +74,23 @@ class MongoDBClient:
         return cls.get_db()["engine_cache"]
 
     @classmethod
+    def pgns_collection(cls):
+        return cls.get_db()["pgns"]
+
+    @classmethod
+    def chesscom_profile_cache_collection(cls):
+        return cls.get_db()["chesscom_profile_cache"]
+
+    @classmethod
+    def moves_collection(cls):
+        """Per-move denormalized rows for stats / repertoire (analysis.md §3.4)."""
+        return cls.get_db()["moves"]
+
+    @classmethod
+    def studies_collection(cls):
+        return cls.get_db()["studies"]
+
+    @classmethod
     def users_collection(cls):
         return cls.get_db()["users"]
 

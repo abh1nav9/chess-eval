@@ -1,32 +1,37 @@
 import type { AnalysisProgressState } from '@/types';
+import { AnalysisProgressOverlayCopy } from '@/components/analysis/AnalysisProgressOverlayCopy';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-/** User-facing copy for the analysis progress overlay. */
-export class AnalysisProgressOverlayCopy {
-  static title(progress: AnalysisProgressState | null): string {
-    if (!progress) return 'Analyzing Game';
-    if (progress.totalMoves > 0) return 'Engine Progress';
-    if (progress.statusMessage) return 'Preparing Engine';
-    return 'Analyzing Game';
-  }
+function formatRemainingSeconds(sec: number): string {
+  if (!Number.isFinite(sec) || sec <= 0) return '';
+  if (sec < 90) return `About ${Math.max(1, Math.round(sec))} s left`;
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `About ${m}m ${s}s left`;
+}
 
-  static subtitle(progress: AnalysisProgressState | null): string {
-    if (!progress) {
-      return 'Running Stockfish on every position. This can take a minute for long games.';
-    }
-    if (progress.totalMoves > 0) {
-      const moveText = `Move ${progress.currentMove} of ${progress.totalMoves}`;
-      if (progress.currentSan) {
-        return `${moveText} — last analyzed: ${progress.currentSan}`;
-      }
-      return moveText;
-    }
-    if (progress.statusMessage) {
-      return progress.statusMessage;
-    }
-    return 'Parsing moves and connecting to the engine...';
-  }
+function AnalysisProgressEta({ progress }: { progress: AnalysisProgressState }) {
+  const [clock, setClock] = useState(() => Date.now());
+  const inBand =
+    !!progress.startedAtMs && progress.percentage >= 4 && progress.percentage <= 97;
+
+  useEffect(() => {
+    if (!inBand) return;
+    const id = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [inBand, progress.startedAtMs, progress.percentage]);
+
+  if (!inBand || !progress.startedAtMs) return null;
+
+  const elapsed = (clock - progress.startedAtMs) / 1000;
+  const p = Math.max(progress.percentage, 1);
+  const estTotal = (elapsed / p) * 100;
+  const remaining = estTotal - elapsed;
+  const line = formatRemainingSeconds(remaining);
+  if (!line) return null;
+  return <p className="text-xs text-[var(--color-text-muted)] tabular-nums">{line}</p>;
 }
 
 interface AnalysisProgressTrackProps {
@@ -92,6 +97,7 @@ export function AnalysisProgressOverlay({ visible, progress }: AnalysisProgressO
                 <p className="text-[15px] leading-relaxed text-[var(--color-text-secondary)]">
                   {AnalysisProgressOverlayCopy.subtitle(progress)}
                 </p>
+                {showBar && progress && <AnalysisProgressEta progress={progress} />}
               </div>
 
               {showBar && (

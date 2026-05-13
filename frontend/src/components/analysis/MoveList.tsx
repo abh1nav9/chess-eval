@@ -6,6 +6,8 @@ import { useGameStore } from '@/store/gameStore';
 import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
 import { Badge } from '@/components/ui/Badge';
 import { ClassificationLegendModal } from '@/components/analysis/ClassificationLegendModal';
+import { MoveCommentCollapsible } from '@/components/analysis/MoveCommentCollapsible';
+import { ComparisonModal } from '@/components/analysis/ComparisonModal';
 import { CLASSIFICATION_CONFIG } from '@/constants';
 import type { MoveEvaluation } from '@/types';
 
@@ -14,6 +16,7 @@ export function MoveList() {
   const { goToMove } = useGameStore();
   const listRef = useRef<HTMLDivElement>(null);
   const [legendOpen, setLegendOpen] = useState(false);
+  const [compareMove, setCompareMove] = useState<MoveEvaluation | null>(null);
 
   const moves = pgnResult?.moves || [];
 
@@ -34,6 +37,14 @@ export function MoveList() {
 
   if (moves.length === 0) return null;
 
+  const sel = selectedMoveIndex >= 0 ? moves[selectedMoveIndex] : null;
+  const canCompare =
+    sel &&
+    sel.best_move_uci &&
+    sel.move_uci &&
+    sel.best_move_uci !== sel.move_uci &&
+    sel.classification !== 'book';
+
   const pairs: [MoveEvaluation | null, MoveEvaluation | null][] = [];
   for (let i = 0; i < moves.length; i += 2) {
     pairs.push([moves[i] || null, moves[i + 1] || null]);
@@ -42,8 +53,20 @@ export function MoveList() {
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <ClassificationLegendModal isOpen={legendOpen} onClose={() => setLegendOpen(false)} />
+      <ComparisonModal move={compareMove} open={compareMove !== null} onClose={() => setCompareMove(null)} />
 
-      <div className="sticky top-0 z-[1] flex justify-end py-1.5 mb-1 -mx-0.5 px-0.5 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-card)]">
+      <div className="sticky top-0 z-[1] flex justify-between items-center gap-2 py-1.5 mb-1 -mx-0.5 px-0.5 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-card)]">
+        {canCompare ? (
+          <button
+            type="button"
+            onClick={() => setCompareMove(sel)}
+            className="text-[10px] font-medium text-[var(--color-accent)] hover:underline cursor-pointer px-2"
+          >
+            Compare played / best
+          </button>
+        ) : (
+          <span className="w-2 shrink-0" aria-hidden />
+        )}
         <button
           type="button"
           onClick={() => setLegendOpen(true)}
@@ -90,8 +113,8 @@ export function MoveList() {
             </div>
           );
         })}
+        </div>
       </div>
-    </div>
     </div>
   );
 }
@@ -126,6 +149,7 @@ function MoveCell({
         <Badge classification={move.classification} size="sm" showLabel />
       </span>
       <span className="font-mono text-xs font-medium min-w-0 flex-1 basis-[2ch]">{move.move}</span>
+      {move.comment ? <MoveCommentCollapsible text={move.comment} /> : null}
       {/* Per-move time (from PGN %clk if available) */}
       {(move as MoveEvaluation & { time_spent?: number }).time_spent != null && (
         <span className="text-[9px] font-mono text-[var(--color-text-muted)] ml-auto tabular-nums">

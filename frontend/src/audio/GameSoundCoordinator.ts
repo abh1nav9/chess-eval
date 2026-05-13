@@ -64,8 +64,8 @@ export class GameSoundCoordinator {
   }
 
   /**
-   * PGN line navigation: forward/back one step uses full move sounds; jump-to-end plays the
-   * terminal move; jump-to-start plays one generic move; other multi-step jumps are silent.
+   * PGN line navigation: one step forward/back uses move sounds; jump-to-end plays the terminal
+   * move once; jump-to-start and other multi-step jumps are silent (analysis.md §4.14).
    */
   onBoardNavigation(prevIndex: number, nextIndex: number, snapshot: GameSnapshot): void {
     if (nextIndex > prevIndex) {
@@ -116,13 +116,13 @@ export class GameSoundCoordinator {
     nextIndex: number,
     snapshot: GameSnapshot,
   ): void {
+    if (nextIndex < 0) {
+      return;
+    }
     const delta = prevIndex - nextIndex;
     if (delta === 1) {
       this.playSoundForMoveIndex(prevIndex, snapshot);
       return;
-    }
-    if (nextIndex === -1 && delta > 1) {
-      this.playEvent('piecemove');
     }
   }
 }

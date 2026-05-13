@@ -114,6 +114,12 @@ class StockfishEngine:
 
             depth = depth or self.config.depth
             movetime = self.config.movetime if movetime is None else movetime
+            cap = getattr(self.config, "max_movetime_ms", None) or 0
+            if cap and cap > 0:
+                if movetime and movetime > 0:
+                    movetime = min(movetime, cap)
+                else:
+                    movetime = cap
 
             await self._send_command(f"position fen {fen}")
             await self._send_command("isready")
@@ -148,6 +154,10 @@ class StockfishEngine:
                 raise RuntimeError("Engine not initialized. Call start() first.")
 
             depth = depth or self.config.depth
+
+            cap = getattr(self.config, "max_movetime_ms", None) or 0
+            if cap and cap > 0:
+                movetime = min(movetime, cap)
 
             await self._send_command(f"setoption name MultiPV value {num_lines}")
             await self._send_command("isready")

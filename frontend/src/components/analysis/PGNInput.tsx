@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { useSubmitPGN } from '@/hooks/useAnalysis';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { SAMPLE_PGN } from '@/constants';
 import { Upload, Sparkles } from 'lucide-react';
+import { analysisService } from '@/services/analysisService';
 
 export function PGNInput() {
   const [pgn, setPgn] = useState('');
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const submitPGN = useSubmitPGN();
   const { isAnalyzing } = useAnalysisStore();
 
@@ -44,6 +47,36 @@ export function PGNInput() {
           <Sparkles size={14} />
           Sample
         </Button>
+      </div>
+
+      <div className="pt-3 mt-3 border-t border-[var(--color-border-subtle)] space-y-2">
+        <p className="text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
+          Bulk multi-game PGN (§7.4)
+        </p>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".pgn,.txt,text/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (!f) return;
+            void (async () => {
+              setBulkMsg(null);
+              try {
+                const r = await analysisService.uploadBulkPgn(f);
+                setBulkMsg(`Queued ${r.count} game(s). Open Library to track progress.`);
+              } catch (err) {
+                setBulkMsg(err instanceof Error ? err.message : 'Bulk upload failed');
+              }
+            })();
+          }}
+        />
+        <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+          Upload .pgn file (multiple games)
+        </Button>
+        {bulkMsg ? <p className="text-xs text-[var(--color-text-muted)]">{bulkMsg}</p> : null}
       </div>
     </div>
   );

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { PGNInput } from '@/components/analysis/PGNInput';
+import { FenSetupPanel } from '@/components/analysis/FenSetupPanel';
 import { ChessComImport } from '@/components/analysis/ChessComImport';
-import { FileText, Hash, Sparkles, UserCircle } from 'lucide-react';
+import { LichessImport } from '@/components/analysis/LichessImport';
+import { FileText, Hash, Sparkles, UserCircle, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function SetupView() {
-  const [inputMode, setInputMode] = useState<'pgn' | 'chesscom'>('pgn');
+  const [inputMode, setInputMode] = useState<'pgn' | 'chesscom' | 'fen' | 'lichess'>('pgn');
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto w-full px-4">
@@ -56,10 +58,42 @@ export function SetupView() {
               <UserCircle size={16} />
               Chess.com
             </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('lichess')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-[var(--radius-sm)] transition-all cursor-pointer ${
+                inputMode === 'lichess'
+                  ? 'bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-lg'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+              }`}
+            >
+              <Globe size={16} />
+              Lichess
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('fen')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-[var(--radius-sm)] transition-all cursor-pointer ${
+                inputMode === 'fen'
+                  ? 'bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-lg'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+              }`}
+            >
+              <Hash size={16} />
+              FEN
+            </button>
           </div>
 
           <div className="min-h-[300px]">
-            {inputMode === 'pgn' ? <PGNInput /> : <ChessComImport />}
+            {inputMode === 'pgn' ? (
+              <PGNInput />
+            ) : inputMode === 'chesscom' ? (
+              <ChessComImport />
+            ) : inputMode === 'lichess' ? (
+              <LichessImport />
+            ) : (
+              <FenSetupPanel />
+            )}
           </div>
         </Card>
 

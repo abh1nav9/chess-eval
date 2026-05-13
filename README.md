@@ -7,7 +7,7 @@ ChessEval is a production-grade, open-source chess analysis platform. It combine
 The project is split into two primary applications:
 
 1. **[Backend API](./backend/README.md)**: A Python FastAPI service that parses PGNs, runs Stockfish evaluations via `python-chess`, and stores results in MongoDB.
-2. **[Frontend Client](./frontend/README.md)**: A React SPA that renders the interactive chess board, evaluation graphs (via Chart.js), engine lines, optional Chess.com profile import (server-proxied), and move sounds in a minimalist dark-mode UI.
+2. **[Frontend Client](./frontend/README.md)**: A React SPA that renders the interactive chess board, evaluation graphs (via Chart.js), engine lines, optional Chess.com profile import (server-proxied; titles, names, avatars on the list and analysis board chrome), and move sounds in a minimalist dark-mode UI.
 
 ## Getting Started
 

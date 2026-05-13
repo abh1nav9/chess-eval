@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { evalToBarPercent } from '@/utils/evalBarPercent';
 
 interface EvalBarProps {
   eval_score: number;
@@ -7,27 +8,12 @@ interface EvalBarProps {
 }
 
 export function EvalBar({ eval_score, mate_in, height = 560 }: EvalBarProps) {
-  let whitePercent: number;
+  const whitePercent = evalToBarPercent(eval_score, mate_in ?? null);
   let displayText: string;
 
   if (mate_in !== null && mate_in !== undefined) {
-    whitePercent = mate_in > 0 ? 100 : 0;
     displayText = `M${Math.abs(mate_in)}`;
   } else {
-    // Chess.com-style: more sensitive to small eval changes
-    // Linear in the ±2 range, then gradual compression beyond that
-    const clamped = Math.max(-10, Math.min(10, eval_score));
-    if (Math.abs(clamped) <= 2) {
-      // Linear region: 0 maps to 50%, ±2 maps to ~35%/65%
-      whitePercent = 50 + (clamped / 2) * 15;
-    } else {
-      // Compressed region beyond ±2
-      const sign = clamped > 0 ? 1 : -1;
-      const excess = Math.abs(clamped) - 2;
-      const compressed = 15 + (excess / 8) * 35;
-      whitePercent = 50 + sign * Math.min(compressed, 48);
-    }
-
     const absEval = Math.abs(eval_score);
     displayText = absEval >= 10
       ? `${eval_score > 0 ? '+' : ''}${eval_score.toFixed(0)}`

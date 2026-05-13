@@ -37,6 +37,15 @@ async def health_check():
     if sf_status == "available":
         sf_version = await StockfishVersionProbe.read_id_name(settings.STOCKFISH_PATH)
 
+    n, age = 0, None
+    if mongo_status == "connected":
+        try:
+            from app.db.repositories import AnalysisRepository
+
+            n, age = await AnalysisRepository.processing_stats()
+        except Exception:
+            pass
+
     return HealthResponse(
         status="ok",
         version=settings.APP_VERSION,
@@ -44,4 +53,6 @@ async def health_check():
         mongodb=mongo_status,
         stockfish=sf_status,
         stockfish_version=sf_version,
+        processing_queue_depth=n,
+        oldest_processing_age_seconds=age,
     )

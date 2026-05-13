@@ -14,10 +14,10 @@ class ChessAnalysisError(Exception):
 
 
 class InvalidPGNError(ChessAnalysisError):
-    """Raised when a PGN string cannot be parsed."""
+    """Raised when a PGN string cannot be parsed or replayed."""
 
-    def __init__(self, message: str = "Invalid PGN format"):
-        super().__init__(message=message, status_code=400)
+    def __init__(self, message: str = "Invalid PGN format", status_code: int = 400):
+        super().__init__(message=message, status_code=status_code)
 
 
 class InvalidFENError(ChessAnalysisError):

@@ -1,12 +1,14 @@
 import { useAnalysisStore } from '@/store/analysisStore';
+import { useGameStore } from '@/store/gameStore';
 import { Badge } from '@/components/ui/Badge';
 import { CLASSIFICATION_CONFIG } from '@/constants';
 import { TrendingUp, TrendingDown, Minus, Lightbulb } from 'lucide-react';
 
 export function EngineLines() {
   const { pgnResult, fenResult, selectedMoveIndex, mode } = useAnalysisStore();
+  const isExploring = useGameStore((s) => s.isExploring);
 
-  if (mode === 'fen' && fenResult) {
+  if (fenResult && (isExploring || mode === 'fen')) {
     return (
       <div className="space-y-2">
         <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">

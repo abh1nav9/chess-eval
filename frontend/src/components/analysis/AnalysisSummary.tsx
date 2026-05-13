@@ -1,8 +1,11 @@
 import { useAnalysisStore } from '@/store/analysisStore';
 import { CLASSIFICATION_CONFIG } from '@/constants';
 import type { MoveClassification } from '@/types';
-import { Target, BarChart3 } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Target, BarChart3, Download, FileText } from 'lucide-react';
 import { ReanalyzePanel } from './ReanalyzePanel';
+import { Button } from '@/components/ui/Button';
+import { analysisService } from '@/services/analysisService';
 
 export function AnalysisSummary() {
   const { pgnResult } = useAnalysisStore();
@@ -10,6 +13,20 @@ export function AnalysisSummary() {
   if (!pgnResult) return null;
 
   const { summary, metadata } = pgnResult;
+
+  const handleDownloadAnnotated = async () => {
+    try {
+      const blob = await analysisService.exportAnnotatedPgn(pgnResult.analysis_id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `game-${pgnResult.analysis_id}.pgn`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      /* ignore */
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -92,6 +109,23 @@ export function AnalysisSummary() {
         </div>
       </div>
 
+      <div className="pt-1 flex flex-col gap-2">
+        <Button type="button" variant="outline" size="sm" className="w-full gap-2" onClick={handleDownloadAnnotated}>
+          <Download size={14} aria-hidden />
+          Download annotated PGN
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full gap-2"
+          onClick={() => window.open(analysisService.htmlReportUrl(pgnResult.analysis_id), '_blank', 'noopener,noreferrer')}
+        >
+          <FileText size={14} aria-hidden />
+          Open HTML report
+        </Button>
+      </div>
+
       {/* Re-analyze at different depth */}
       <ReanalyzePanel />
     </div>
@@ -118,7 +152,7 @@ function AccuracyCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function StatCard({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-bg-primary)] border border-[var(--color-border)]">
       <div className="flex items-center gap-1.5 mb-1">

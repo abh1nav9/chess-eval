@@ -71,6 +71,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       fens.push(replay.fen());
     }
 
+    const orientMatch = pgn.match(/\[Orientation "(white|black)"\]/i);
+    const orientation: 'white' | 'black' =
+      orientMatch && orientMatch[1]?.toLowerCase() === 'black' ? 'black' : 'white';
+
     set({
       game,
       pgnFenHistory: fens,
@@ -81,6 +85,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       currentFen: INITIAL_FEN,
       branchStartIndex: -1,
       isExploring: false,
+      orientation,
     });
   },
 
