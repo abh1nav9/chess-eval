@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useRef, type CSSProperties, type FC, type ReactNode, type Ref } from 'react';
+import { useMemo, useCallback, useState, useRef, useLayoutEffect, type CSSProperties, type FC, type ReactNode, type Ref } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
 import { Loader2 } from 'lucide-react';
@@ -10,9 +10,22 @@ import type { Square } from 'chess.js';
 import { analysisService } from '@/services/analysisService';
 import { classifyLiveMove } from '@/utils/classifyLiveMove';
 import { gameSoundCoordinator } from '@/audio/GameSoundCoordinator';
-import { BOARD_THEMES } from '@/constants/boardTheme';
+import { BOARD_THEMES, type BoardThemeId } from '@/constants/boardTheme';
 import { ANALYSIS_BOARD_PIXEL_SIZE } from '@/constants/boardLayout';
 import { useUIStore } from '@/store/uiStore';
+
+function readCssBoardSquareColors(): { light: string; dark: string } {
+  const cs = getComputedStyle(document.documentElement);
+  return {
+    light: cs.getPropertyValue('--color-white-square').trim(),
+    dark: cs.getPropertyValue('--color-black-square').trim(),
+  };
+}
+
+function fallbackSquareColors(boardTheme: BoardThemeId) {
+  const t = BOARD_THEMES[boardTheme] ?? BOARD_THEMES.classic;
+  return { light: t.light, dark: t.dark };
+}
 
 type ArrowTuple = [Square, Square, string?];
 
@@ -106,7 +119,18 @@ function getCurrentEval(): number {
 export function ChessBoard() {
   const { currentFen, orientation, makeMove, isExploring, currentMoveIndex } = useGameStore();
   const boardTheme = useUIStore((s) => s.boardTheme);
-  const sqColors = BOARD_THEMES[boardTheme] ?? BOARD_THEMES.classic;
+  const appTheme = useUIStore((s) => s.theme);
+  const [squareColors, setSquareColors] = useState(() => fallbackSquareColors(boardTheme));
+
+  useLayoutEffect(() => {
+    const { light, dark } = readCssBoardSquareColors();
+    const fb = fallbackSquareColors(boardTheme);
+    setSquareColors({
+      light: light || fb.light,
+      dark: dark || fb.dark,
+    });
+  }, [boardTheme, appTheme]);
+
   const {
     pgnResult,
     selectedMoveIndex,
@@ -375,8 +399,8 @@ export function ChessBoard() {
         areArrowsAllowed={true}
         customArrows={customArrows}
         customBoardStyle={{ borderRadius: 'var(--radius-lg)' }}
-        customDarkSquareStyle={{ backgroundColor: sqColors.dark }}
-        customLightSquareStyle={{ backgroundColor: sqColors.light }}
+        customDarkSquareStyle={{ backgroundColor: squareColors.dark }}
+        customLightSquareStyle={{ backgroundColor: squareColors.light }}
         customSquareStyles={customSquareStyles}
         customSquare={customSquare}
         animationDuration={200}
