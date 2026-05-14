@@ -1,6 +1,4 @@
-# API + Mongo + Redis. Frontend: `cd frontend && npm run dev`, or `docker compose --profile frontend up frontend` (Stockfish 18 in API image).
-version: "3.9"
-
+# API + Mongo + Redis. Frontend: `cd frontend && npm run dev`, or `docker compose --profile frontend up frontend`.
 services:
   api:
     build:
@@ -12,7 +10,7 @@ services:
       - MONGODB_URL=mongodb://mongodb:27017
       - MONGODB_DB_NAME=chess_eval
       - STOCKFISH_PATH=/usr/local/bin/stockfish
-      - STOCKFISH_DEPTH=20
+      - STOCKFISH_DEPTH=26
       - STOCKFISH_MOVETIME=1000
       - CORS_ORIGINS=["http://localhost:5173","http://localhost:3000","http://localhost:4173"]
     depends_on:
