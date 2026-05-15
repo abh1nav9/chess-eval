@@ -1,5 +1,3 @@
-# app/analysis/coach_signals.py
-
 from __future__ import annotations
 
 from dataclasses import dataclass

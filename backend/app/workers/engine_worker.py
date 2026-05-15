@@ -1,4 +1,3 @@
-# Engine worker abstraction for future distributed analysis
 """
 Engine worker abstraction.
 Currently runs analysis in-process. Designed to be replaced with

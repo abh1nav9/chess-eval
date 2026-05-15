@@ -1,5 +1,3 @@
-# app/analysis/coach_templates.py
-
 from __future__ import annotations
 
 from typing import Callable
