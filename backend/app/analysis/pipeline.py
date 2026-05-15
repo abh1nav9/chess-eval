@@ -22,6 +22,7 @@ from app.analysis.depth_strategy import resolve_depth_from_swing
 from app.analysis.polyglot_book import PolyglotBookProbe
 from app.analysis.pgn_parser import ParsedGame, ParsedMove, parse_pgn
 from app.analysis.pipeline_helpers import (
+    attach_coach_message,
     build_book_move_doc,
     cached_to_engine_result,
     extract_game_metadata,
@@ -248,7 +249,12 @@ class AnalysisPipeline:
 
         for i, parsed_move in enumerate(moves):
             if i <= last_book_ply:
-                move_documents.append(build_book_move_doc(parsed_move))
+                book_doc = build_book_move_doc(parsed_move)
+                board_before_book = chess.Board(parsed_move.fen_before)
+                await attach_coach_message(
+                    book_doc, mate_in_before=prev_mate, board_before=board_before_book
+                )
+                move_documents.append(book_doc)
                 await self._broadcast_progress(analysis_id, i, len(moves), move_documents[-1])
                 carried_result = None
                 continue
@@ -258,7 +264,11 @@ class AnalysisPipeline:
                     bb = chess.Board(parsed_move.fen_before)
                     mv = chess.Move.from_uci(parsed_move.uci)
                     if poly_probe.is_played_move_in_book(bb, mv):
-                        move_documents.append(build_book_move_doc(parsed_move))
+                        book_doc = build_book_move_doc(parsed_move)
+                        await attach_coach_message(
+                            book_doc, mate_in_before=prev_mate, board_before=bb
+                        )
+                        move_documents.append(book_doc)
                         await self._broadcast_progress(analysis_id, i, len(moves), move_documents[-1])
                         carried_result = None
                         continue
@@ -410,6 +420,9 @@ class AnalysisPipeline:
                 lichess_accuracy=lichess_acc,
                 lichess_win_pct_played=win_pct_played,
                 lichess_played_cp_white_pov=played_cp_w,
+            )
+            await attach_coach_message(
+                move_doc, mate_in_before=prev_mate, board_before=board_before
             )
 
             move_documents.append(move_doc)

@@ -9,6 +9,7 @@ import { ClassificationLegendModal } from '@/components/analysis/ClassificationL
 import { MoveCommentCollapsible } from '@/components/analysis/MoveCommentCollapsible';
 import { ComparisonModal } from '@/components/analysis/ComparisonModal';
 import { CLASSIFICATION_CONFIG } from '@/constants';
+import { COACH_CLASSIFICATION_META } from '@/components/board/CoachMessage';
 import type { MoveEvaluation } from '@/types';
 
 export function MoveList() {
@@ -148,7 +149,19 @@ function MoveCell({
       <span className="inline-flex min-w-0 max-w-full shrink-0 items-center">
         <Badge classification={move.classification} size="sm" showLabel />
       </span>
-      <span className="font-mono text-xs font-medium min-w-0 flex-1 basis-[2ch]">{move.move}</span>
+      <span className="relative font-mono text-xs font-medium min-w-0 flex-1 basis-[2ch]">
+        {move.move}
+        {move.coach_message && (
+          <span
+            className="absolute -top-0.5 -right-1.5 h-1.5 w-1.5 rounded-full"
+            style={{
+              background:
+                COACH_CLASSIFICATION_META[move.classification]?.color ?? '#8ca0b8',
+            }}
+            aria-hidden
+          />
+        )}
+      </span>
       {move.comment ? <MoveCommentCollapsible text={move.comment} /> : null}
       {/* Per-move time (from PGN %clk if available) */}
       {(move as MoveEvaluation & { time_spent?: number }).time_spent != null && (

@@ -36,6 +36,7 @@ class MoveDocument(BaseModel):
     lichess_accuracy: Optional[float] = None
     lichess_win_pct_played: Optional[float] = None
     lichess_played_cp_white_pov: Optional[float] = None
+    coach_message: Optional[str] = None
 
 
 class GameMetadataDocument(BaseModel):

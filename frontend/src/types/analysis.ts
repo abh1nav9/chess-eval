@@ -37,6 +37,7 @@ export interface MoveEvaluation {
   lichess_accuracy?: number | null;
   lichess_win_pct_played?: number | null;
   lichess_played_cp_white_pov?: number | null;
+  coach_message?: string | null;
 }
 
 export interface GameMetadata {

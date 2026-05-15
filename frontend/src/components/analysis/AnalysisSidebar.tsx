@@ -8,11 +8,12 @@ import { AnalysisSummary } from '@/components/analysis/AnalysisSummary';
 import { TopEngineLines } from '@/components/analysis/TopEngineLines';
 import { EvalGraph } from '@/components/charts/EvalGraph';
 import { Card } from '@/components/ui/Card';
+import { CoachMessage } from '@/components/board/CoachMessage';
 import { List, Cpu, PieChart } from 'lucide-react';
 
 export function AnalysisSidebar() {
   const { activeTab, setActiveTab } = useUIStore();
-  const { pgnResult, fenResult } = useAnalysisStore();
+  const { pgnResult, fenResult, selectedMoveIndex } = useAnalysisStore();
 
   const hasAnalysis = pgnResult || fenResult;
 
@@ -60,6 +61,12 @@ export function AnalysisSidebar() {
               )}
               <span className="text-[var(--color-text-secondary)]">{pgnResult.metadata.opening}</span>
             </div>
+          </div>
+        )}
+
+        {pgnResult && selectedMoveIndex >= 0 && selectedMoveIndex < pgnResult.moves.length && (
+          <div className="px-3 pt-2">
+            <CoachMessage move={pgnResult.moves[selectedMoveIndex]} />
           </div>
         )}
 

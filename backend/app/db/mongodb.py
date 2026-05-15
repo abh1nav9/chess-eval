@@ -91,6 +91,10 @@ class MongoDBClient:
         return cls.get_db()["studies"]
 
     @classmethod
+    def coach_messages_collection(cls):
+        return cls.get_db()["coach_messages"]
+
+    @classmethod
     def users_collection(cls):
         return cls.get_db()["users"]
 

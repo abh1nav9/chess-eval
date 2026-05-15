@@ -28,6 +28,11 @@ async def ensure_mongo_indexes() -> None:
         await moves.create_index([("completed_at", -1), ("opening_eco", 1)])
         studies = MongoDBClient.studies_collection()
         await studies.create_index([("updated_at", -1)])
+        coach_msgs = MongoDBClient.coach_messages_collection()
+        await coach_msgs.create_index(
+            [("fen_before", 1), ("move_uci", 1), ("classification", 1)],
+            unique=True,
+        )
         cc = MongoDBClient.chesscom_profile_cache_collection()
         try:
             await cc.create_index(

@@ -13,6 +13,7 @@ from app.analysis.pgn_parser import ParsedGame, ParsedMove
 from app.core.config import get_settings
 from app.engine.types import EngineResult, EngineScore, ScoreType
 from app.engine.white_pov import WhitePovEngineNormalizer
+from app.analysis.coach import get_coach_message_cached
 from app.models.analysis import GameMetadataDocument, MoveDocument
 
 
@@ -61,6 +62,17 @@ def extract_game_metadata(game: ParsedGame) -> GameMetadataDocument:
         white_elo=h.get("WhiteElo"),
         black_elo=h.get("BlackElo"),
         site=h.get("Site", ""),
+    )
+
+
+async def attach_coach_message(
+    doc: MoveDocument,
+    *,
+    mate_in_before: int | None,
+    board_before: chess.Board,
+) -> None:
+    doc.coach_message = await get_coach_message_cached(
+        doc, mate_in_before=mate_in_before, board_before=board_before
     )
 
 

@@ -100,6 +100,10 @@ class MoveEvaluation(BaseModel):
         None,
         description="Played child eval in centipawns (white POV); null if mate; for decisive weighting",
     )
+    coach_message: Optional[str] = Field(
+        None,
+        description="Template-based contextual coach commentary for this move",
+    )
 
 
 class GameMetadata(BaseModel):
